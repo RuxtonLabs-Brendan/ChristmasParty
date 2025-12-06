@@ -20,28 +20,37 @@ export function useGameStatePusher() {
   useEffect(() => {
     const fetchState = async () => {
       try {
-        console.log('🔄 Fetching initial game state...');
+        console.log('🔄 Fetching game state...');
         const response = await fetch(`${API_BASE}/state`);
         if (response.ok) {
           const state = await response.json();
-          console.log('✅ Initial game state received:', state);
-          console.log('Players in initial state:', state.players);
+          console.log('✅ Game state received:', {
+            playersCount: state.players?.length || 0,
+            players: state.players,
+            phase: state.phase
+          });
           setGameState(state);
         } else {
-          console.error('❌ Failed to fetch initial state:', response.status);
+          console.error('❌ Failed to fetch state:', response.status);
         }
       } catch (error) {
-        console.error('❌ Error fetching initial game state:', error);
+        console.error('❌ Error fetching game state:', error);
       }
     };
+    
+    // Fetch immediately
     fetchState();
     
     // Poll for state updates every 2 seconds as a fallback (in case Pusher events are missed)
     const pollInterval = setInterval(() => {
+      console.log('🔄 Polling for game state update...');
       fetchState();
     }, 2000);
     
-    return () => clearInterval(pollInterval);
+    return () => {
+      console.log('🧹 Cleaning up polling interval');
+      clearInterval(pollInterval);
+    };
   }, []);
 
   // Listen to Pusher events

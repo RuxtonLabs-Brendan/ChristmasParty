@@ -18,8 +18,9 @@ const ADMIN_PASSWORD = 'merrychristmas';
 
 export default function AdminPage() {
   const navigate = useNavigate();
-  const { gameState, startGame } = useGameStatePusher();
+  const { gameState, startGame, connected } = useGameStatePusher();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(new Date());
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [gifts, setGifts] = useState([]);
@@ -32,13 +33,22 @@ export default function AdminPage() {
   const [startingGame, setStartingGame] = useState(false);
   const passwordInputRef = useRef(null);
 
-  // Listen for game state changes to clear loading state
+  // Listen for game state changes to clear loading state and track updates
   useEffect(() => {
     if (gameState?.phase === GAME_PHASES.PLAYING && startingGame) {
       setStartingGame(false);
       setError('');
     }
-  }, [gameState?.phase, startingGame]);
+    // Track when game state updates
+    if (gameState) {
+      setLastUpdate(new Date());
+      console.log('AdminPage - Game state updated:', {
+        players: gameState.players?.length || 0,
+        phase: gameState.phase,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [gameState, startingGame]);
 
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
@@ -452,6 +462,14 @@ export default function AdminPage() {
                     <p className="text-lg font-impact text-christmas-gold">
                       Players Joined: <span className="text-white">{gameState.players?.length || 0}</span>
                     </p>
+                    <p className="text-sm font-impact text-christmas-gold mt-2">
+                      Connection: <span className={connected ? 'text-green-300' : 'text-red-300'}>
+                        {connected ? '🟢 Connected' : '🔴 Disconnected'}
+                      </span>
+                    </p>
+                    <p className="text-xs font-impact text-christmas-gold mt-1 opacity-75">
+                      Last update: {lastUpdate.toLocaleTimeString()}
+                    </p>
                   </div>
                   <button
                     onClick={() => {
@@ -492,6 +510,19 @@ export default function AdminPage() {
                   <p className="text-sm text-christmas-gold font-impact">
                     ✅ Game is currently in progress
                   </p>
+                )}
+                {gameState.players && gameState.players.length > 0 && (
+                  <div className="mt-4 pt-4 border-t-2 border-christmas-gold border-opacity-30">
+                    <p className="text-sm text-christmas-gold font-impact mb-2">Players in lobby:</p>
+                    <div className="space-y-1">
+                      {gameState.players.map((player) => (
+                        <div key={player.id} className="flex items-center gap-2 bg-white bg-opacity-20 rounded px-2 py-1">
+                          <span className="text-lg">{player.emoji}</span>
+                          <span className="text-christmas-gold font-impact text-sm">{player.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
