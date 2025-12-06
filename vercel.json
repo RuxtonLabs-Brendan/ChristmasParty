@@ -1,7 +1,20 @@
 {
   "buildCommand": "cd client && npm install && npm run build",
   "outputDirectory": "client/dist",
+  "functions": {
+    "api/admin/gifts.js": {
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
+    {
+      "source": "/api/admin/gifts/:id",
+      "destination": "/api/admin/gifts?id=:id"
+    },
+    {
+      "source": "/api/admin/(.*)",
+      "destination": "/api/admin/gifts"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"

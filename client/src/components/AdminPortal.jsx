@@ -34,11 +34,19 @@ export default function AdminPortal({ onClose }) {
   const loadGifts = async () => {
     try {
       const response = await fetch(`${API_BASE}/gifts`);
-      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(`Failed to load gifts: ${response.status}`);
+      }
+      const text = await response.text();
+      if (!text) {
+        setGifts([]);
+        return;
+      }
+      const data = JSON.parse(text);
       setGifts(data.gifts || []);
     } catch (err) {
       console.error('Failed to load gifts:', err);
-      setError('Failed to load gifts');
+      setError('Failed to load gifts: ' + err.message);
     }
   };
 
@@ -137,15 +145,27 @@ export default function AdminPortal({ onClose }) {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to add gift');
+        const text = await response.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(text);
+        } catch {
+          throw new Error(`Server error: ${response.status} ${response.statusText}`);
+        }
+        throw new Error(errorData.error || 'Failed to add gift');
       }
 
-      const data = await response.json();
-      setGifts(data.gifts);
+      const text = await response.text();
+      if (!text) {
+        throw new Error('Empty response from server');
+      }
+      
+      const data = JSON.parse(text);
+      setGifts(data.gifts || []);
       setFormData({ name: '', image: '', amazonUrl: '' });
     } catch (err) {
-      setError(err.message);
+      console.error('Error adding gift:', err);
+      setError(err.message || 'Failed to add gift');
     } finally {
       setLoading(false);
     }
@@ -209,15 +229,30 @@ export default function AdminPortal({ onClose }) {
         method: 'DELETE'
       });
 
-      if (!response.ok) throw new Error('Failed to delete gift');
+      if (!response.ok) {
+        const text = await response.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(text);
+        } catch {
+          throw new Error(`Server error: ${response.status}`);
+        }
+        throw new Error(errorData.error || 'Failed to delete gift');
+      }
 
-      const data = await response.json();
-      setGifts(data.gifts);
+      const text = await response.text();
+      if (!text) {
+        throw new Error('Empty response from server');
+      }
+      
+      const data = JSON.parse(text);
+      setGifts(data.gifts || []);
       if (editingGift === giftId) {
         setEditingGift(null);
       }
     } catch (err) {
-      setError(err.message);
+      console.error('Error deleting gift:', err);
+      setError(err.message || 'Failed to delete gift');
     }
   };
 
@@ -229,12 +264,28 @@ export default function AdminPortal({ onClose }) {
         method: 'DELETE'
       });
 
-      if (!response.ok) throw new Error('Failed to clear gifts');
+      if (!response.ok) {
+        const text = await response.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(text);
+        } catch {
+          throw new Error(`Server error: ${response.status}`);
+        }
+        throw new Error(errorData.error || 'Failed to clear gifts');
+      }
 
-      const data = await response.json();
-      setGifts(data.gifts);
+      const text = await response.text();
+      if (!text) {
+        setGifts([]);
+        return;
+      }
+      
+      const data = JSON.parse(text);
+      setGifts(data.gifts || []);
     } catch (err) {
-      setError(err.message);
+      console.error('Error clearing gifts:', err);
+      setError(err.message || 'Failed to clear gifts');
     }
   };
 
