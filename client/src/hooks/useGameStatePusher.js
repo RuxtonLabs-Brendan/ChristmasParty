@@ -22,8 +22,22 @@ export function useGameStatePusher() {
       try {
         console.log('🔄 Fetching game state...');
         const response = await fetch(`${API_BASE}/state`);
+        console.log('State API response status:', response.status);
+        console.log('State API response headers:', Object.fromEntries(response.headers.entries()));
+        
         if (response.ok) {
-          const state = await response.json();
+          const responseText = await response.text();
+          console.log('State API raw response:', responseText);
+          
+          let state;
+          try {
+            state = JSON.parse(responseText);
+          } catch (parseError) {
+            console.error('❌ Failed to parse state response:', parseError);
+            console.error('Response text:', responseText);
+            return;
+          }
+          
           console.log('✅ Game state received:', {
             playersCount: state.players?.length || 0,
             players: state.players,
@@ -36,6 +50,9 @@ export function useGameStatePusher() {
           console.log('✅ Players array length:', state.players?.length);
           if (state.players && state.players.length > 0) {
             console.log('✅ Player details:', state.players.map(p => ({ id: p.id, name: p.name, emoji: p.emoji })));
+          } else {
+            console.warn('⚠️ WARNING: State API returned 0 players!');
+            console.warn('Full state object:', JSON.stringify(state, null, 2));
           }
           setGameState(state);
         } else {

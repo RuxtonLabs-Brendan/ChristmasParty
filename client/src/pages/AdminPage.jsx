@@ -484,6 +484,28 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* Debug Button */}
+          <div className="bg-yellow-900 bg-opacity-50 p-4 rounded-lg border-4 border-yellow-600 mb-4">
+            <button
+              onClick={async () => {
+                try {
+                  console.log('🔍 Testing debug endpoint...');
+                  const response = await fetch('/api/game/debug');
+                  const data = await response.json();
+                  console.log('🔍 Debug endpoint response:', JSON.stringify(data, null, 2));
+                  alert('Check console for debug info!');
+                } catch (error) {
+                  console.error('Debug endpoint error:', error);
+                  alert('Debug endpoint failed - check console');
+                }
+              }}
+              className="px-4 py-2 bg-yellow-600 text-black font-impact rounded border-2 border-white hover:bg-yellow-500 transition"
+            >
+              🔍 Debug Database
+            </button>
+            <p className="text-xs text-yellow-300 mt-2">Click to check what's actually in the database</p>
+          </div>
+
           {/* Start Session Button */}
           {startGame && gameState && (
             <div className="bg-white bg-opacity-20 p-6 rounded-lg border-4 border-christmas-gold mb-6">
