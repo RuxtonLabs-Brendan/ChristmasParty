@@ -14,14 +14,35 @@ if (!process.env.DATABASE_URL) {
 
 // Create connection pool only if DATABASE_URL is set
 let pool = null;
-if (process.env.DATABASE_URL) {
-  pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('localhost') ? false : {
-      rejectUnauthorized: false
-    }
-  });
+
+function initializePool() {
+  if (pool) {
+    return pool; // Already initialized
+  }
+  
+  if (!process.env.DATABASE_URL) {
+    console.warn('WARNING: DATABASE_URL environment variable is not set!');
+    console.warn('Database features will be disabled. Game state will be in-memory only.');
+    return null;
+  }
+  
+  try {
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.DATABASE_URL?.includes('localhost') ? false : {
+        rejectUnauthorized: false
+      }
+    });
+    console.log('Database pool created successfully');
+    return pool;
+  } catch (error) {
+    console.error('Error creating database pool:', error);
+    return null;
+  }
 }
+
+// Initialize pool immediately
+pool = initializePool();
 
 // Test connection only if pool exists
 if (pool) {
@@ -37,8 +58,14 @@ if (pool) {
 
 // Initialize database schema
 export async function initDatabase() {
+  // Ensure pool is initialized
   if (!pool) {
-    console.log('Database not configured, skipping schema initialization');
+    pool = initializePool();
+  }
+  
+  if (!pool) {
+    console.warn('Database pool not initialized. Skipping schema creation.');
+    console.warn('DATABASE_URL:', process.env.DATABASE_URL ? 'Set' : 'NOT SET');
     return;
   }
   
@@ -147,6 +174,11 @@ export async function getAnyGame() {
 }
 
 export async function updateGame(gameId, updates) {
+  if (!pool) {
+    console.log('updateGame: No database pool, skipping update');
+    return null;
+  }
+  
   const fields = Object.keys(updates);
   const values = Object.values(updates);
   const setClause = fields.map((field, i) => {
@@ -155,11 +187,17 @@ export async function updateGame(gameId, updates) {
     return `${dbField} = $${i + 2}`;
   }).join(', ');
   
-  const result = await pool.query(
-    `UPDATE games SET ${setClause} WHERE id = $1 RETURNING *`,
-    [gameId, ...values]
-  );
-  return result.rows[0];
+  try {
+    const result = await pool.query(
+      `UPDATE games SET ${setClause} WHERE id = $1 RETURNING *`,
+      [gameId, ...values]
+    );
+    console.log(`updateGame: Updated game ${gameId}. Fields: ${fields.join(', ')}`);
+    return result.rows[0];
+  } catch (error) {
+    console.error(`updateGame: Error updating game ${gameId}:`, error);
+    throw error;
+  }
 }
 
 export async function resetGame(gameId) {

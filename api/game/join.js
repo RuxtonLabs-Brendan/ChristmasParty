@@ -19,10 +19,22 @@ async function ensureDb() {
   if (!dbInitPromise) {
     dbInitPromise = (async () => {
       try {
+        console.log('Join handler: Initializing database...');
+        console.log('Join handler: DATABASE_URL exists?', !!process.env.DATABASE_URL);
         await initDatabase();
-        console.log('Database initialized for serverless function');
+        console.log('Join handler: Database initialized successfully');
+        
+        // Verify pool is available
+        const pool = (await import('../../server/db/index.js')).default;
+        if (!pool) {
+          console.error('Join handler: WARNING - Database pool is null after initialization!');
+          console.error('Join handler: DATABASE_URL:', process.env.DATABASE_URL ? 'Set' : 'NOT SET');
+        } else {
+          console.log('Join handler: Database pool verified');
+        }
       } catch (error) {
-        console.error('Database initialization error:', error);
+        console.error('Join handler: Database initialization error:', error);
+        console.error('Join handler: Error stack:', error.stack);
       }
     })();
   }
