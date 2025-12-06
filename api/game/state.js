@@ -1,5 +1,6 @@
 // Vercel serverless function to get current game state
 import { initDatabase } from '../../server/db/index.js';
+import * as db from '../../server/db/index.js';
 import gameState from '../../server/gameState.js';
 
 let dbInitPromise = null;
@@ -29,6 +30,15 @@ export default async function handler(req, res) {
     console.log('State API: Fetching game state...');
     const state = await gameState.getState();
     console.log('State API: Returning state with', state.players?.length || 0, 'players');
+    console.log('State API: Players:', state.players?.map(p => ({ id: p.id, name: p.name })) || []);
+    
+    // Also verify by querying database directly
+    const latestGame = await db.getLatestGame();
+    if (latestGame) {
+      const directPlayers = await db.getPlayers(latestGame.id);
+      console.log('State API: Direct DB query found', directPlayers.length, 'players');
+    }
+    
     return res.status(200).json(state);
   } catch (error) {
     console.error('Error getting game state:', error);

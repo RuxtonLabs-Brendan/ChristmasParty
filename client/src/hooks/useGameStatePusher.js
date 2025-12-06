@@ -41,11 +41,12 @@ export function useGameStatePusher() {
     // Fetch immediately
     fetchState();
     
-    // Poll for state updates every 2 seconds as a fallback (in case Pusher events are missed)
+    // Poll for state updates every 10 seconds as a fallback (in case Pusher events are missed)
+    // Reduced frequency since real-time should come from Pusher
     const pollInterval = setInterval(() => {
-      console.log('🔄 Polling for game state update...');
+      console.log('🔄 Polling for game state update (fallback)...');
       fetchState();
-    }, 2000);
+    }, 10000);
     
     return () => {
       console.log('🧹 Cleaning up polling interval');
@@ -67,7 +68,18 @@ export function useGameStatePusher() {
       console.log('New game state:', data.gameState);
       console.log('Players in new state:', data.gameState?.players);
       if (data.gameState) {
+        console.log(`✅ Updating game state with ${data.gameState.players?.length || 0} players`);
         setGameState(data.gameState);
+      } else {
+        console.warn('⚠️ player-joined event missing gameState, fetching fresh state...');
+        // If gameState is missing, fetch it immediately
+        fetch(`${API_BASE}/state`)
+          .then(res => res.json())
+          .then(state => {
+            console.log('✅ Fetched fresh state after player-joined event:', state);
+            setGameState(state);
+          })
+          .catch(err => console.error('Error fetching state after player-joined:', err));
       }
     };
 

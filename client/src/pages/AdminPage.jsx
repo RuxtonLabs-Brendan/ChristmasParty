@@ -31,6 +31,8 @@ export default function AdminPage() {
   const [extractingImage, setExtractingImage] = useState(false);
   const [error, setError] = useState('');
   const [startingGame, setStartingGame] = useState(false);
+  const [realtimeNotification, setRealtimeNotification] = useState(null);
+  const prevPlayerCountRef = useRef(0);
   const passwordInputRef = useRef(null);
 
   // Listen for game state changes to clear loading state and track updates
@@ -41,14 +43,34 @@ export default function AdminPage() {
     }
     // Track when game state updates
     if (gameState) {
-      setLastUpdate(new Date());
+      const now = new Date();
+      const currentPlayerCount = gameState.players?.length || 0;
+      
+      // Check if a new player joined (real-time update)
+      if (currentPlayerCount > prevPlayerCountRef.current && prevPlayerCountRef.current > 0) {
+        const newPlayers = gameState.players.slice(prevPlayerCountRef.current);
+        if (newPlayers.length > 0) {
+          const newPlayer = newPlayers[0];
+          setRealtimeNotification({
+            message: `${newPlayer.emoji} ${newPlayer.name} joined!`,
+            timestamp: now
+          });
+          // Clear notification after 3 seconds
+          setTimeout(() => setRealtimeNotification(null), 3000);
+        }
+      }
+      
+      prevPlayerCountRef.current = currentPlayerCount;
+      setLastUpdate(now);
       console.log('AdminPage - Game state updated:', {
-        players: gameState.players?.length || 0,
+        players: currentPlayerCount,
+        playerNames: gameState.players?.map(p => p.name) || [],
         phase: gameState.phase,
-        timestamp: new Date().toISOString()
+        timestamp: now.toISOString(),
+        connected: connected
       });
     }
-  }, [gameState, startingGame]);
+  }, [gameState, startingGame, connected]);
 
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
@@ -449,6 +471,15 @@ export default function AdminPage() {
             </div>
           )}
 
+          {realtimeNotification && (
+            <div className="bg-green-600 text-white p-4 rounded border-4 border-christmas-gold mb-4 font-impact animate-pulse shadow-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">⚡</span>
+                <span className="text-xl">{realtimeNotification.message}</span>
+              </div>
+            </div>
+          )}
+
           {/* Start Session Button */}
           {startGame && gameState && (
             <div className="bg-white bg-opacity-20 p-6 rounded-lg border-4 border-christmas-gold mb-6">
@@ -464,11 +495,12 @@ export default function AdminPage() {
                     </p>
                     <p className="text-sm font-impact text-christmas-gold mt-2">
                       Connection: <span className={connected ? 'text-green-300' : 'text-red-300'}>
-                        {connected ? '🟢 Connected' : '🔴 Disconnected'}
+                        {connected ? '🟢 Connected (Real-time)' : '🔴 Disconnected'}
                       </span>
                     </p>
                     <p className="text-xs font-impact text-christmas-gold mt-1 opacity-75">
                       Last update: {lastUpdate.toLocaleTimeString()}
+                      {connected && <span className="ml-2 text-green-300">⚡ Live</span>}
                     </p>
                   </div>
                   <button

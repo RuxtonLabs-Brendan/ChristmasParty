@@ -78,8 +78,20 @@ export default async function handler(req, res) {
     
     // Broadcast to all clients via Pusher
     console.log('Broadcasting player-joined event via Pusher...');
+    console.log('Pusher event payload:', {
+      player: {
+        id: player.id,
+        name: player.name,
+        emoji: player.emoji
+      },
+      gameState: {
+        playersCount: state.players?.length || 0,
+        players: state.players?.map(p => ({ id: p.id, name: p.name })) || []
+      }
+    });
+    
     try {
-      await pusher.trigger('game-channel', 'player-joined', {
+      const pusherResult = await pusher.trigger('game-channel', 'player-joined', {
         player: {
           id: player.id,
           name: player.name,
@@ -90,8 +102,13 @@ export default async function handler(req, res) {
         gameState: state
       });
       console.log('✅ Pusher event broadcasted successfully');
+      console.log('Pusher trigger result:', pusherResult);
     } catch (pusherError) {
       console.error('❌ Pusher broadcast error:', pusherError);
+      console.error('Pusher error details:', {
+        message: pusherError.message,
+        stack: pusherError.stack
+      });
       // Still return success, but log the error
     }
 

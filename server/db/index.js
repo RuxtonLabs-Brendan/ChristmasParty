@@ -102,19 +102,35 @@ export async function getLatestGame() {
   }
   // Get the most recent game that has players
   try {
+    // First, let's see all games
+    const allGames = await pool.query('SELECT id, phase, created_at FROM games ORDER BY created_at DESC LIMIT 5');
+    console.log(`getLatestGame: Total games in database: ${allGames.rows.length}`);
+    if (allGames.rows.length > 0) {
+      console.log('getLatestGame: Recent games:', allGames.rows.map(g => ({ id: g.id, phase: g.phase })));
+    }
+    
+    // Check players for each game
+    for (const game of allGames.rows) {
+      const playerCount = await pool.query('SELECT COUNT(*) as count FROM players WHERE game_id = $1', [game.id]);
+      console.log(`getLatestGame: Game ${game.id} has ${playerCount.rows[0].count} players`);
+    }
+    
     const result = await pool.query(
       `SELECT g.* FROM games g
        WHERE EXISTS (SELECT 1 FROM players p WHERE p.game_id = g.id)
        ORDER BY g.created_at DESC
        LIMIT 1`
     );
-    console.log(`getLatestGame: Found ${result.rows.length} game(s)`);
+    console.log(`getLatestGame: Found ${result.rows.length} game(s) with players`);
     if (result.rows.length > 0) {
       console.log(`getLatestGame: Returning game ID ${result.rows[0].id}`);
+    } else {
+      console.log('getLatestGame: No games found with players');
     }
     return result.rows[0] || null;
   } catch (error) {
     console.error('getLatestGame error:', error);
+    console.error('getLatestGame error stack:', error.stack);
     return null;
   }
 }
@@ -156,18 +172,29 @@ export async function resetGame(gameId) {
 // Player operations
 export async function addPlayer(gameId, socketId, name, emoji) {
   if (!pool) {
+    console.log('addPlayer: No database pool, using in-memory fallback');
     // In-memory fallback - return mock player
     return { id: socketId, socket_id: socketId, name, emoji, is_connected: true };
   }
-  const result = await pool.query(
-    `INSERT INTO players (game_id, socket_id, name, emoji, is_connected)
-     VALUES ($1, $2, $3, $4, true)
-     ON CONFLICT (game_id, socket_id) 
-     DO UPDATE SET name = $3, emoji = $4, is_connected = true
-     RETURNING *`,
-    [gameId, socketId, name, emoji]
-  );
-  return result.rows[0];
+  console.log(`addPlayer: Adding player to database - gameId: ${gameId}, socketId: ${socketId}, name: ${name}`);
+  try {
+    const result = await pool.query(
+      `INSERT INTO players (game_id, socket_id, name, emoji, is_connected)
+       VALUES ($1, $2, $3, $4, true)
+       ON CONFLICT (game_id, socket_id) 
+       DO UPDATE SET name = $3, emoji = $4, is_connected = true
+       RETURNING *`,
+      [gameId, socketId, name, emoji]
+    );
+    console.log(`addPlayer: Player saved successfully, row count: ${result.rows.length}`);
+    if (result.rows.length > 0) {
+      console.log(`addPlayer: Saved player:`, { id: result.rows[0].id, socket_id: result.rows[0].socket_id, name: result.rows[0].name });
+    }
+    return result.rows[0];
+  } catch (error) {
+    console.error('addPlayer: Database error:', error);
+    throw error;
+  }
 }
 
 export async function removePlayer(gameId, socketId) {
@@ -185,29 +212,41 @@ export async function setPlayerConnected(gameId, socketId, isConnected) {
 }
 
 export async function getPlayers(gameId) {
-  if (!pool) return [];
+  if (!pool) {
+    console.log('getPlayers: No database pool, returning empty array');
+    return [];
+  }
   
-  const result = await pool.query(
-    `SELECT p.id, p.socket_id, p.name, p.emoji, p.is_connected, p.created_at,
-     COALESCE(
-       json_agg(pg.gift_id) FILTER (WHERE pg.gift_id IS NOT NULL),
-       '[]'::json
-     ) as gifts
-     FROM players p
-     LEFT JOIN player_gifts pg ON p.id = pg.player_id AND pg.game_id = $1
-     WHERE p.game_id = $1
-     GROUP BY p.id, p.socket_id, p.name, p.emoji, p.is_connected, p.created_at
-     ORDER BY p.created_at`,
-    [gameId]
-  );
-  
-  return result.rows.map(row => ({
-    id: row.socket_id,
-    name: row.name,
-    emoji: row.emoji,
-    gifts: row.gifts || [],
-    isConnected: row.is_connected
-  }));
+  console.log(`getPlayers: Querying players for gameId: ${gameId}`);
+  try {
+    const result = await pool.query(
+      `SELECT p.id, p.socket_id, p.name, p.emoji, p.is_connected, p.created_at,
+       COALESCE(
+         json_agg(pg.gift_id) FILTER (WHERE pg.gift_id IS NOT NULL),
+         '[]'::json
+       ) as gifts
+       FROM players p
+       LEFT JOIN player_gifts pg ON p.id = pg.player_id AND pg.game_id = $1
+       WHERE p.game_id = $1
+       GROUP BY p.id, p.socket_id, p.name, p.emoji, p.is_connected, p.created_at
+       ORDER BY p.created_at`,
+      [gameId]
+    );
+    
+    console.log(`getPlayers: Found ${result.rows.length} players for gameId ${gameId}`);
+    const players = result.rows.map(row => ({
+      id: row.socket_id,
+      name: row.name,
+      emoji: row.emoji,
+      gifts: row.gifts || [],
+      isConnected: row.is_connected
+    }));
+    console.log(`getPlayers: Returning players:`, players.map(p => ({ id: p.id, name: p.name })));
+    return players;
+  } catch (error) {
+    console.error('getPlayers: Database error:', error);
+    return [];
+  }
 }
 
 export async function getPlayerBySocketId(gameId, socketId) {
