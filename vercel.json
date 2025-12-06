@@ -8,15 +8,7 @@
   },
   "rewrites": [
     {
-      "source": "/api/admin/gifts/:id",
-      "destination": "/api/admin/gifts?id=:id"
-    },
-    {
-      "source": "/api/admin/(.*)",
-      "destination": "/api/admin/gifts"
-    },
-    {
-      "source": "/(.*)",
+      "source": "/((?!api).*)",
       "destination": "/index.html"
     }
   ]
