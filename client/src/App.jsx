@@ -82,7 +82,15 @@ function GameApp() {
 
   if (!hasJoined) {
     return (
-      <>
+      <div className="w-full min-h-screen">
+        <GameUI
+          gameState={gameState}
+          connected={connected}
+          isHost={isHost()}
+          onStartGame={startGame}
+          onOpenAdmin={() => navigate('/admin')}
+        />
+        <div className="h-16"></div>
         <Lobby
           onJoin={handleJoin}
           isHost={gameState.hostId === currentPlayerId}
@@ -90,7 +98,7 @@ function GameApp() {
           players={gameState.players || []}
           onOpenAdmin={() => navigate('/admin')}
         />
-      </>
+      </div>
     );
   }
 

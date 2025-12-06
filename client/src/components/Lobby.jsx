@@ -19,8 +19,8 @@ export default function Lobby({ onJoin, isHost, playerCount, players = [], onOpe
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-      <div className="bg-gradient-to-br from-christmas-red to-christmas-green p-8 rounded-lg border-8 border-christmas-gold shadow-3d-strong max-w-md w-full">
+    <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 overflow-y-auto" style={{ paddingTop: '64px', paddingBottom: '32px' }}>
+      <div className="bg-gradient-to-br from-christmas-red to-christmas-green p-8 rounded-lg border-8 border-christmas-gold shadow-3d-strong max-w-md w-full my-auto">
         <h1 className="text-4xl font-impact text-christmas-gold text-center mb-6 drop-shadow-lg">
           ENLIGHTEN CHRISTMAS PARTY
         </h1>
