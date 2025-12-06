@@ -360,15 +360,15 @@ export default function AdminPage() {
   // Password prompt if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-christmas-red to-christmas-green flex items-center justify-center p-4">
-        <div className="bg-white bg-opacity-90 p-8 rounded-lg border-8 border-christmas-gold shadow-3d-strong max-w-md w-full">
+      <div className="min-h-screen bg-black bg-opacity-80 flex items-center justify-center p-4">
+        <div className="bg-gradient-to-br from-christmas-red to-christmas-green p-8 rounded-lg border-8 border-christmas-gold shadow-3d-strong max-w-md w-full">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-impact text-christmas-gold drop-shadow-lg">
               🔒 ADMIN ACCESS
             </h1>
             <button
               onClick={() => navigate('/')}
-              className="text-christmas-red text-2xl hover:text-red-800 transition"
+              className="text-christmas-gold text-3xl hover:text-white transition"
               title="Back to Game"
             >
               ✕
@@ -377,7 +377,7 @@ export default function AdminPage() {
           
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
             <div>
-              <label className="block text-christmas-red font-impact text-lg mb-2">
+              <label className="block text-christmas-gold font-impact text-lg mb-2">
                 Enter Password
               </label>
               <input
@@ -385,13 +385,13 @@ export default function AdminPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded border-4 border-christmas-gold bg-white text-black font-impact text-xl focus:outline-none focus:ring-4 focus:ring-christmas-gold"
+                className="w-full px-4 py-3 rounded border-4 border-christmas-gold bg-white text-black font-impact text-xl"
                 placeholder="Password"
                 autoFocus
                 style={{ pointerEvents: 'auto' }}
               />
               {passwordError && (
-                <p className="text-red-600 font-impact text-sm mt-2">{passwordError}</p>
+                <p className="text-red-300 font-impact text-sm mt-2">{passwordError}</p>
               )}
             </div>
             <button
@@ -405,7 +405,7 @@ export default function AdminPage() {
           
           <button
             onClick={() => navigate('/')}
-            className="w-full mt-4 py-2 bg-gray-200 text-gray-700 font-impact text-lg rounded border-2 border-gray-400 hover:bg-gray-300 transition"
+            className="w-full mt-4 py-2 bg-christmas-red text-christmas-gold font-impact text-lg rounded border-4 border-christmas-gold hover:bg-red-800 transition shadow-lg"
           >
             ← Back to Game
           </button>
@@ -416,9 +416,9 @@ export default function AdminPage() {
 
   // Main admin portal content
   return (
-    <div className="min-h-screen bg-gradient-to-br from-christmas-red to-christmas-green p-4">
+    <div className="min-h-screen bg-black bg-opacity-80 p-4">
       <div className="max-w-6xl mx-auto">
-        <div className="bg-white bg-opacity-90 p-8 rounded-lg border-8 border-christmas-gold shadow-3d-strong mb-6">
+        <div className="bg-gradient-to-br from-christmas-red to-christmas-green p-8 rounded-lg border-8 border-christmas-gold shadow-3d-strong mb-6">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-4xl font-impact text-christmas-gold drop-shadow-lg">
               🎁 ADMIN PORTAL - GIFT MANAGEMENT
@@ -441,16 +441,16 @@ export default function AdminPage() {
 
           {/* Start Session Button */}
           {startGame && gameState && (
-            <div className="bg-white bg-opacity-90 p-6 rounded-lg border-4 border-christmas-gold mb-6">
-              <h2 className="text-2xl font-impact text-christmas-red mb-4">🎮 Game Session Control</h2>
+            <div className="bg-white bg-opacity-20 p-6 rounded-lg border-4 border-christmas-gold mb-6">
+              <h2 className="text-2xl font-impact text-christmas-gold mb-4">🎮 Game Session Control</h2>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-lg font-impact text-gray-700">
-                      Game Phase: <span className="text-christmas-red">{gameState.phase || 'Unknown'}</span>
+                    <p className="text-lg font-impact text-christmas-gold">
+                      Game Phase: <span className="text-white">{gameState.phase || 'Unknown'}</span>
                     </p>
-                    <p className="text-lg font-impact text-gray-700">
-                      Players Joined: <span className="text-christmas-red">{gameState.players?.length || 0}</span>
+                    <p className="text-lg font-impact text-christmas-gold">
+                      Players Joined: <span className="text-white">{gameState.players?.length || 0}</span>
                     </p>
                   </div>
                   <button
@@ -484,12 +484,12 @@ export default function AdminPage() {
                   </button>
                 </div>
                 {gameState.phase === GAME_PHASES.LOBBY && (gameState.players?.length || 0) < 2 && (
-                  <p className="text-sm text-gray-600 font-impact">
+                  <p className="text-sm text-christmas-gold font-impact">
                     ⚠️ Need at least 2 players to start the game
                   </p>
                 )}
                 {gameState.phase === GAME_PHASES.PLAYING && (
-                  <p className="text-sm text-green-600 font-impact">
+                  <p className="text-sm text-christmas-gold font-impact">
                     ✅ Game is currently in progress
                   </p>
                 )}
@@ -498,11 +498,11 @@ export default function AdminPage() {
           )}
 
           {/* Add Gift Form */}
-          <div className="bg-white bg-opacity-90 p-6 rounded-lg border-4 border-christmas-gold mb-6">
-            <h2 className="text-2xl font-impact text-christmas-red mb-4">Add New Gift</h2>
+          <div className="bg-white bg-opacity-20 p-6 rounded-lg border-4 border-christmas-gold mb-6">
+            <h2 className="text-2xl font-impact text-christmas-gold mb-4">Add New Gift</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-christmas-red font-impact text-lg mb-2">
+                <label className="block text-christmas-gold font-impact text-lg mb-2">
                   Gift Name *
                 </label>
                 <input
@@ -515,7 +515,7 @@ export default function AdminPage() {
                 />
               </div>
               <div>
-                <label className="block text-christmas-red font-impact text-lg mb-2">
+                <label className="block text-christmas-gold font-impact text-lg mb-2">
                   Amazon Product URL (Optional)
                 </label>
                 <div className="flex gap-2 mb-2">
@@ -535,10 +535,10 @@ export default function AdminPage() {
                     {extractingImage ? '⏳' : '🔍 Extract Image'}
                   </button>
                 </div>
-                <div>
-                  <label className="block text-christmas-red font-impact text-sm mb-2">
-                    Image URL (Auto-filled or paste manually)
-                  </label>
+                  <div>
+                    <label className="block text-christmas-gold font-impact text-sm mb-2">
+                      Image URL (Auto-filled or paste manually)
+                    </label>
                   <input
                     type="url"
                     value={formData.image}
@@ -547,7 +547,7 @@ export default function AdminPage() {
                     placeholder="https://images-na.ssl-images-amazon.com/images/I/..."
                   />
                 </div>
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="text-sm text-christmas-gold mt-1">
                   Paste an Amazon product URL and click "Extract Image" to auto-fill, or paste image URL directly
                 </p>
               </div>
@@ -562,9 +562,9 @@ export default function AdminPage() {
           </div>
 
           {/* Gift List */}
-          <div className="bg-white bg-opacity-90 p-6 rounded-lg border-4 border-christmas-gold">
+          <div className="bg-white bg-opacity-20 p-6 rounded-lg border-4 border-christmas-gold">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-impact text-christmas-red">
+              <h2 className="text-2xl font-impact text-christmas-gold">
                 Current Gifts ({gifts.length})
               </h2>
               {gifts.length > 0 && (
@@ -578,7 +578,7 @@ export default function AdminPage() {
             </div>
 
             {gifts.length === 0 ? (
-              <p className="text-center text-gray-600 font-impact text-lg py-8">
+              <p className="text-center text-christmas-gold font-impact text-lg py-8">
                 No gifts added yet. Add your first gift above!
               </p>
             ) : (
@@ -590,7 +590,7 @@ export default function AdminPage() {
                       <div className="bg-white border-4 border-christmas-gold rounded-lg p-4">
                         <form onSubmit={handleSaveEdit} className="space-y-3">
                           <div>
-                            <label className="block text-christmas-red font-impact text-sm mb-1">
+                            <label className="block text-christmas-gold font-impact text-sm mb-1">
                               Gift Name *
                             </label>
                             <input
@@ -604,7 +604,7 @@ export default function AdminPage() {
                             />
                           </div>
                           <div>
-                            <label className="block text-christmas-red font-impact text-sm mb-1">
+                            <label className="block text-christmas-gold font-impact text-sm mb-1">
                               Amazon Product URL (Optional)
                             </label>
                             <div className="flex gap-2 mb-2">
@@ -625,7 +625,7 @@ export default function AdminPage() {
                               </button>
                             </div>
                             <div>
-                              <label className="block text-christmas-red font-impact text-xs mb-1">
+                              <label className="block text-christmas-gold font-impact text-xs mb-1">
                                 Image URL
                               </label>
                               <input
@@ -673,7 +673,7 @@ export default function AdminPage() {
                             />
                           )}
                           <div className="flex-1">
-                            <h3 className="font-impact text-christmas-red text-lg mb-2">
+                            <h3 className="font-impact text-christmas-gold text-lg mb-2">
                               {gift.name}
                             </h3>
                             <div className="flex gap-2">
