@@ -4,6 +4,9 @@
   "functions": {
     "api/admin/[...path].js": {
       "maxDuration": 30
+    },
+    "api/game/*.js": {
+      "maxDuration": 30
     }
   },
   "rewrites": [

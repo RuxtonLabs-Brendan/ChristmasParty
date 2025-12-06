@@ -2,13 +2,20 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { GAME_PHASES } from '../../../shared/types.js';
 
-// Use relative URL in production, localhost in development
-const API_BASE = import.meta.env.PROD 
-  ? '/api/admin'
-  : 'http://localhost:3001/api/admin';
+// Use environment variable for backend URL, or fallback to relative/localhost
+const getBackendUrl = () => {
+  if (import.meta.env.VITE_BACKEND_URL) {
+    return `${import.meta.env.VITE_BACKEND_URL}/api/admin`;
+  }
+  return import.meta.env.PROD 
+    ? '/api/admin'
+    : 'http://localhost:3001/api/admin';
+};
+
+const API_BASE = getBackendUrl();
 const ADMIN_PASSWORD = 'merrychristmas';
 
-export default function AdminPortal({ onClose, socket, startGame, gameState }) {
+export default function AdminPortal({ onClose, startGame, gameState }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -22,30 +29,13 @@ export default function AdminPortal({ onClose, socket, startGame, gameState }) {
   const [startingGame, setStartingGame] = useState(false);
   const passwordInputRef = useRef(null);
 
-  // Listen for game start errors
+  // Listen for game state changes to clear loading state
   useEffect(() => {
-    if (!socket) return;
-
-    const handleError = ({ message }) => {
-      if (message.includes('start') || message.includes('game')) {
-        setError(message);
-        setStartingGame(false);
-      }
-    };
-
-    const handleGameStarted = () => {
+    if (gameState?.phase === GAME_PHASES.PLAYING && startingGame) {
       setStartingGame(false);
       setError('');
-    };
-
-    socket.on('error', handleError);
-    socket.on('game-started', handleGameStarted);
-
-    return () => {
-      socket.off('error', handleError);
-      socket.off('game-started', handleGameStarted);
-    };
-  }, [socket]);
+    }
+  }, [gameState?.phase, startingGame]);
 
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
@@ -460,7 +450,7 @@ export default function AdminPortal({ onClose, socket, startGame, gameState }) {
         )}
 
         {/* Start Session Button */}
-        {socket && startGame && gameState && (
+        {startGame && gameState && (
           <div className="bg-white bg-opacity-90 p-6 rounded-lg border-4 border-christmas-gold mb-6">
             <h2 className="text-2xl font-impact text-christmas-red mb-4">🎮 Game Session Control</h2>
             <div className="space-y-4">
@@ -475,18 +465,17 @@ export default function AdminPortal({ onClose, socket, startGame, gameState }) {
                 </div>
                 <button
                   onClick={() => {
-                    if (startGame && socket && socket.connected) {
+                    if (startGame) {
                       setStartingGame(true);
                       setError('');
-                      startGame();
-                    } else if (!socket || !socket.connected) {
-                      setError('Not connected to server. Please refresh the page.');
+                      startGame().catch(err => {
+                        setError(err.message || 'Failed to start game');
+                        setStartingGame(false);
+                      });
                     }
                   }}
                   disabled={
                     startingGame ||
-                    !socket || 
-                    !socket.connected || 
                     gameState.phase !== GAME_PHASES.LOBBY ||
                     (gameState.players?.length || 0) < 2
                   }
@@ -494,8 +483,6 @@ export default function AdminPortal({ onClose, socket, startGame, gameState }) {
                   title={
                     startingGame
                       ? 'Starting game...'
-                      : !socket || !socket.connected 
-                      ? 'Not connected to server'
                       : gameState.phase !== GAME_PHASES.LOBBY
                       ? 'Game already started'
                       : (gameState.players?.length || 0) < 2

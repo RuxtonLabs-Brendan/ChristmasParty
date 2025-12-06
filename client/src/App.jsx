@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSocket } from './hooks/useSocket';
-import { useGameState } from './hooks/useGameState';
+import { useGameStatePusher } from './hooks/useGameStatePusher';
 import { GAME_PHASES } from '../../shared/types.js';
 import Lobby from './components/Lobby';
 import GameBoard from './components/GameBoard';
@@ -12,8 +11,7 @@ import GameUI from './components/GameUI';
 import AdminPortal from './components/AdminPortal';
 
 function App() {
-  const { socket, connected } = useSocket();
-  const { gameState, joinGame, startGame, openGift, stealGift, isCurrentPlayer, isHost, currentPlayerId } = useGameState(socket);
+  const { gameState, joinGame, startGame, openGift, stealGift, isCurrentPlayer, isHost, currentPlayerId, connected } = useGameStatePusher();
   
   // Debug logging
   useEffect(() => {
@@ -26,27 +24,11 @@ function App() {
   const [stealingGiftId, setStealingGiftId] = useState(null);
   const [showAdmin, setShowAdmin] = useState(false);
 
+  // Handle gift animations (handled by Pusher events in useGameStatePusher)
   useEffect(() => {
-    if (!socket) return;
-
-    const handleGiftOpened = ({ gift }) => {
-      setOpeningGiftId(gift.id);
-      setTimeout(() => setOpeningGiftId(null), 2000);
-    };
-
-    const handleGiftStolen = ({ gift }) => {
-      setStealingGiftId(gift.id);
-      setTimeout(() => setStealingGiftId(null), 2000);
-    };
-
-    socket.on('gift-opened', handleGiftOpened);
-    socket.on('gift-stolen', handleGiftStolen);
-
-    return () => {
-      socket.off('gift-opened', handleGiftOpened);
-      socket.off('gift-stolen', handleGiftStolen);
-    };
-  }, [socket]);
+    // These will be triggered by gameState updates from Pusher
+    // We can add animation logic here if needed
+  }, [gameState]);
 
   const handleJoin = (name, emoji) => {
     joinGame(name, emoji);
@@ -71,7 +53,7 @@ function App() {
       <>
         <Lobby
           onJoin={handleJoin}
-          isHost={gameState.hostId === socket?.id}
+          isHost={gameState.hostId === currentPlayerId}
           playerCount={gameState.players?.length || 0}
           players={gameState.players || []}
           onOpenAdmin={() => setShowAdmin(true)}
@@ -79,7 +61,6 @@ function App() {
         {showAdmin && (
           <AdminPortal 
             onClose={() => setShowAdmin(false)} 
-            socket={socket}
             startGame={startGame}
             gameState={gameState}
           />
@@ -101,7 +82,6 @@ function App() {
       {showAdmin && (
         <AdminPortal 
           onClose={() => setShowAdmin(false)} 
-          socket={socket}
           startGame={startGame}
           gameState={gameState}
         />

@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 
-// Use relative URL in production, localhost in development
-const SOCKET_URL = import.meta.env.PROD 
-  ? window.location.origin 
-  : 'http://localhost:3001';
+// Use environment variable for backend URL, or fallback to relative/localhost
+const SOCKET_URL = import.meta.env.VITE_BACKEND_URL 
+  ? import.meta.env.VITE_BACKEND_URL
+  : import.meta.env.PROD 
+    ? window.location.origin 
+    : 'http://localhost:3001';
 
 export function useSocket() {
   const [socket, setSocket] = useState(null);
