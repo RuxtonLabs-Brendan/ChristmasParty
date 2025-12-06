@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { setupSocketHandlers } from './socketHandlers.js';
 import adminRoutes from './adminRoutes.js';
+import gameRoutes from './gameRoutes.js';
 import { initDatabase } from './db/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -17,8 +18,9 @@ const server = createServer(app);
 app.use(cors());
 app.use(express.json());
 
-// Admin API routes - MUST come before static file serving
+// API routes - MUST come before static file serving
 app.use('/api/admin', adminRoutes);
+app.use('/api/game', gameRoutes);
 
 // Serve static files from client/dist in production
 const isProduction = process.env.NODE_ENV === 'production';
