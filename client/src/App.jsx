@@ -104,6 +104,9 @@ function GameApp() {
         onOpenAdmin={() => navigate('/admin')}
       />
       
+      {/* Spacer to account for fixed header - adjusts based on game state */}
+      <div className={`${gameState.phase === 'playing' ? 'h-48' : gameState.phase === 'ended' ? 'h-32' : 'h-16'}`}></div>
+      
       <GameBoard>
         <ChristmasTree />
         
