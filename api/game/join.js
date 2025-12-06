@@ -66,11 +66,14 @@ export default async function handler(req, res) {
     console.log('Adding player to game state...');
     const player = await gameState.addPlayer(playerId, name.trim(), emoji);
     console.log(`✅ Player joined: ${player.name} (${player.emoji})`);
+    console.log(`Game ID after adding player: ${gameState.gameId}`);
     
+    // Force refresh and get state
     const state = await gameState.getState();
-    console.log('Current game state:', {
+    console.log('Current game state after join:', {
+      gameId: gameState.gameId,
       playersCount: state.players?.length || 0,
-      players: state.players
+      players: state.players?.map(p => ({ id: p.id, name: p.name, emoji: p.emoji }))
     });
     
     // Broadcast to all clients via Pusher

@@ -96,15 +96,27 @@ export async function getGame(gameId) {
 }
 
 export async function getLatestGame() {
-  if (!pool) return null;
+  if (!pool) {
+    console.log('getLatestGame: No database pool, returning null');
+    return null;
+  }
   // Get the most recent game that has players
-  const result = await pool.query(
-    `SELECT g.* FROM games g
-     WHERE EXISTS (SELECT 1 FROM players p WHERE p.game_id = g.id)
-     ORDER BY g.created_at DESC
-     LIMIT 1`
-  );
-  return result.rows[0] || null;
+  try {
+    const result = await pool.query(
+      `SELECT g.* FROM games g
+       WHERE EXISTS (SELECT 1 FROM players p WHERE p.game_id = g.id)
+       ORDER BY g.created_at DESC
+       LIMIT 1`
+    );
+    console.log(`getLatestGame: Found ${result.rows.length} game(s)`);
+    if (result.rows.length > 0) {
+      console.log(`getLatestGame: Returning game ID ${result.rows[0].id}`);
+    }
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('getLatestGame error:', error);
+    return null;
+  }
 }
 
 export async function updateGame(gameId, updates) {
