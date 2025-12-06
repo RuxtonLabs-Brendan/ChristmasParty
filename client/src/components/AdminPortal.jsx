@@ -35,18 +35,30 @@ export default function AdminPortal({ onClose }) {
     try {
       const response = await fetch(`${API_BASE}/gifts`);
       if (!response.ok) {
-        throw new Error(`Failed to load gifts: ${response.status}`);
+        const text = await response.text();
+        let errorMsg = `Failed to load gifts: ${response.status}`;
+        try {
+          const errorData = JSON.parse(text);
+          errorMsg = errorData.error || errorMsg;
+        } catch {
+          // Use default error message
+        }
+        throw new Error(errorMsg);
       }
+      
       const text = await response.text();
-      if (!text) {
+      if (!text || text.trim() === '') {
         setGifts([]);
         return;
       }
+      
       const data = JSON.parse(text);
       setGifts(data.gifts || []);
     } catch (err) {
       console.error('Failed to load gifts:', err);
       setError('Failed to load gifts: ' + err.message);
+      // Set empty array on error so UI doesn't break
+      setGifts([]);
     }
   };
 
@@ -144,23 +156,46 @@ export default function AdminPortal({ onClose }) {
         })
       });
 
+      // Check response status
       if (!response.ok) {
-        const text = await response.text();
+        let errorText = '';
+        try {
+          errorText = await response.text();
+        } catch {
+          errorText = '';
+        }
+        
         let errorData;
         try {
-          errorData = JSON.parse(text);
+          errorData = errorText ? JSON.parse(errorText) : {};
         } catch {
-          throw new Error(`Server error: ${response.status} ${response.statusText}`);
+          throw new Error(`Server error: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`);
         }
-        throw new Error(errorData.error || 'Failed to add gift');
+        throw new Error(errorData.error || `Failed to add gift: ${response.status}`);
       }
 
-      const text = await response.text();
-      if (!text) {
+      // Parse response
+      let responseText = '';
+      try {
+        responseText = await response.text();
+      } catch (err) {
+        console.error('Error reading response:', err);
+        throw new Error('Failed to read server response');
+      }
+      
+      if (!responseText || !responseText.trim()) {
+        console.error('Empty response from server');
         throw new Error('Empty response from server');
       }
       
-      const data = JSON.parse(text);
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseErr) {
+        console.error('Failed to parse JSON response:', parseErr, 'Response text:', responseText);
+        throw new Error('Invalid JSON response from server');
+      }
+      
       setGifts(data.gifts || []);
       setFormData({ name: '', image: '', amazonUrl: '' });
     } catch (err) {

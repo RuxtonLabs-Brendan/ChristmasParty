@@ -20,29 +20,40 @@ async function ensureDb() {
 }
 
 export default async function handler(req, res) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, PUT, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  await ensureDb();
-
+  // Wrap everything in try-catch to ensure we always return a response
   try {
+    // Enable CORS
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, PUT, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Content-Type', 'application/json');
+
+    if (req.method === 'OPTIONS') {
+      return res.status(200).json({});
+    }
+
+    // Initialize database before proceeding
+    try {
+      await ensureDb();
+    } catch (dbError) {
+      console.error('Database initialization failed:', dbError);
+      // Continue - will use in-memory mode if DB fails
+    }
+
     // Parse request body if present
     let body = {};
     if (req.method === 'POST' || req.method === 'PUT') {
-      if (typeof req.body === 'string') {
-        try {
-          body = JSON.parse(req.body);
-        } catch {
-          body = {};
+      try {
+        if (req.body) {
+          if (typeof req.body === 'string') {
+            body = JSON.parse(req.body);
+          } else if (typeof req.body === 'object') {
+            body = req.body;
+          }
         }
-      } else {
-        body = req.body || {};
+      } catch (parseError) {
+        console.error('Error parsing request body:', parseError);
+        return res.status(400).json({ error: 'Invalid JSON in request body' });
       }
     }
 
@@ -70,8 +81,13 @@ export default async function handler(req, res) {
 
     if (req.method === 'GET') {
       // Get all gifts
-      const gifts = await db.getAdminGifts();
-      return res.status(200).json({ gifts });
+      try {
+        const gifts = await db.getAdminGifts();
+        return res.status(200).json({ gifts: gifts || [] });
+      } catch (error) {
+        console.error('Error getting gifts:', error);
+        return res.status(200).json({ gifts: [] });
+      }
     }
 
     if (req.method === 'POST') {
@@ -82,15 +98,35 @@ export default async function handler(req, res) {
       }
 
       // Add a new gift
+      console.log('POST request received, body:', JSON.stringify(body));
       const { name, image } = body;
       
-      if (!name || !name.trim()) {
+      if (!name || typeof name !== 'string' || !name.trim()) {
+        console.log('Validation failed: name is missing or invalid');
         return res.status(400).json({ error: 'Gift name is required' });
       }
 
-      const gift = await db.addAdminGift(name.trim(), image || '');
-      const gifts = await db.getAdminGifts();
-      return res.status(200).json({ gift, gifts });
+      try {
+        console.log('Adding gift:', { name: name.trim(), image: (image || '').trim() });
+        const gift = await db.addAdminGift(name.trim(), (image || '').trim());
+        console.log('Gift added successfully:', gift);
+        const gifts = await db.getAdminGifts();
+        console.log('Retrieved gifts:', gifts);
+        // Ensure we always return valid JSON
+        const response = { 
+          gift: gift || null, 
+          gifts: Array.isArray(gifts) ? gifts : [] 
+        };
+        console.log('Sending response:', response);
+        return res.status(200).json(response);
+      } catch (error) {
+        console.error('Error adding gift:', error);
+        console.error('Error stack:', error.stack);
+        return res.status(500).json({ 
+          error: error?.message || 'Failed to add gift',
+          details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+      }
     }
 
     if (req.method === 'DELETE') {
@@ -98,22 +134,37 @@ export default async function handler(req, res) {
       // If URL ends with /gifts (no ID), clear all. Otherwise delete specific gift
       const isClearAll = !giftId || pathname.endsWith('/gifts') || pathname === '/api/admin/gifts';
       
-      if (giftId && !isClearAll) {
-        // Delete specific gift
-        await db.deleteAdminGift(giftId);
-        const gifts = await db.getAdminGifts();
-        return res.status(200).json({ success: true, gifts });
-      } else {
-        // Clear all gifts
-        await db.clearAdminGifts();
-        return res.status(200).json({ success: true, gifts: [] });
+      try {
+        if (giftId && !isClearAll) {
+          // Delete specific gift
+          await db.deleteAdminGift(giftId);
+          const gifts = await db.getAdminGifts();
+          return res.status(200).json({ success: true, gifts: gifts || [] });
+        } else {
+          // Clear all gifts
+          await db.clearAdminGifts();
+          return res.status(200).json({ success: true, gifts: [] });
+        }
+      } catch (error) {
+        console.error('Error deleting gift:', error);
+        return res.status(500).json({ error: error.message || 'Failed to delete gift' });
       }
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
     console.error('Admin API error:', error);
-    return res.status(500).json({ error: error.message || 'Internal server error' });
+    // Always return valid JSON, even on unexpected errors
+    try {
+      return res.status(500).json({ error: error?.message || 'Internal server error' });
+    } catch (responseError) {
+      // If we can't send response, log it
+      console.error('Failed to send error response:', responseError);
+      // Try one more time with a simple response
+      if (!res.headersSent) {
+        res.status(500).end(JSON.stringify({ error: 'Internal server error' }));
+      }
+    }
   }
 }
 
