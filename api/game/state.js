@@ -27,6 +27,7 @@ export default async function handler(req, res) {
 
   try {
     await ensureDb();
+    console.log('=== STATE API START ===');
     console.log('State API: Fetching game state...');
     
     // First, let's check what's in the database directly
@@ -39,11 +40,18 @@ export default async function handler(req, res) {
       console.log('State API: Direct players:', directPlayers.map(p => ({ id: p.id, name: p.name, emoji: p.emoji })));
     } else {
       console.log('State API: No game found with players in database');
+      // Check for ANY game
+      const anyGame = await db.getAnyGame();
+      if (anyGame) {
+        console.log(`State API: Found game ${anyGame.id} without players yet`);
+        const anyGamePlayers = await db.getPlayers(anyGame.id);
+        console.log(`State API: Game ${anyGame.id} actually has ${anyGamePlayers.length} players`);
+      }
     }
     
     const state = await gameState.getState();
     console.log('State API: getState() returned', state.players?.length || 0, 'players');
-    console.log('State API: State players:', state.players?.map(p => ({ id: p.id, name: p.name })) || []);
+    console.log('State API: State players:', state.players?.map(p => ({ id: p.id, name: p.name, emoji: p.emoji })) || []);
     
     // If state has no players but DB does, use DB data
     if ((state.players?.length || 0) === 0 && latestGame) {
@@ -80,6 +88,8 @@ export default async function handler(req, res) {
         console.error('State API: Final check error:', finalCheckError);
       }
     }
+    
+    console.log('=== STATE API END ===');
     
     console.log('State API: Final state being returned:', {
       playersCount: state.players?.length || 0,

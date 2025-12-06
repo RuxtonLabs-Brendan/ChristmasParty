@@ -1,5 +1,6 @@
 // Vercel serverless function for player join
 import { initDatabase } from '../../server/db/index.js';
+import * as db from '../../server/db/index.js';
 import gameState from '../../server/gameState.js';
 import Pusher from 'pusher';
 
@@ -63,7 +64,14 @@ export default async function handler(req, res) {
     }
 
     // Add player using playerId instead of socket.id
+    console.log('=== JOIN HANDLER START ===');
     console.log('Adding player to game state...');
+    console.log('Player details:', { playerId, name: name.trim(), emoji });
+    
+    // Get the game ID BEFORE adding player (to verify it's correct)
+    const gameIdBefore = await gameState.ensureGame();
+    console.log('Game ID before adding player:', gameIdBefore);
+    
     const player = await gameState.addPlayer(playerId, name.trim(), emoji);
     
     if (!player) {
@@ -74,8 +82,22 @@ export default async function handler(req, res) {
     console.log(`✅ Player joined: ${player.name} (${player.emoji})`);
     console.log(`Game ID after adding player: ${gameState.gameId}`);
     
+    // Verify player was saved to database by querying directly
+    const directDbCheck = await db.getPlayers(gameState.gameId);
+    console.log(`Direct DB check: Found ${directDbCheck.length} players in game ${gameState.gameId}`);
+    console.log('Direct DB players:', directDbCheck.map(p => ({ id: p.id, name: p.name })));
+    
+    const playerInDb = directDbCheck.find(p => p.id === playerId);
+    if (!playerInDb) {
+      console.error('❌ CRITICAL: Player NOT found in database after addPlayer!');
+      console.error('Expected playerId:', playerId);
+      console.error('Players in DB:', directDbCheck.map(p => p.id));
+    } else {
+      console.log('✅ Verified: Player found in database');
+    }
+    
     // Small delay to ensure database transaction is committed
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 200));
     
     // Force refresh and get state - this should now include the new player
     const state = await gameState.getState();
@@ -91,9 +113,24 @@ export default async function handler(req, res) {
       console.error('❌ WARNING: Player not found in state after join!');
       console.error('Expected playerId:', playerId);
       console.error('Players in state:', state.players?.map(p => p.id) || []);
+      console.error('State gameId:', gameState.gameId);
+      
+      // Try one more time with a longer delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+      const retryState = await gameState.getState();
+      console.log('Retry state players:', retryState.players?.length || 0);
+      if (retryState.players && retryState.players.length > 0) {
+        console.log('✅ Retry successful, updating state');
+        state.players = retryState.players;
+        state.phase = retryState.phase;
+        state.hostId = retryState.hostId;
+        state.currentTurnIndex = retryState.currentTurnIndex;
+      }
     } else {
       console.log('✅ Verified: Player found in state');
     }
+    
+    console.log('=== JOIN HANDLER END ===');
     
     // Verify state has players before broadcasting
     if (!state.players || state.players.length === 0) {
