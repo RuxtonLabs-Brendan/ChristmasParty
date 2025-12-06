@@ -506,6 +506,49 @@ export default function AdminPage() {
             <p className="text-xs text-yellow-300 mt-2">Click to check what's actually in the database</p>
           </div>
 
+          {/* Reset Session Button */}
+          <div className="bg-red-900 bg-opacity-50 p-6 rounded-lg border-4 border-red-600 mb-6">
+            <h2 className="text-2xl font-impact text-red-300 mb-4">⚠️ Reset Session</h2>
+            <p className="text-white font-impact text-sm mb-4">
+              This will remove ALL players and reset the game to lobby. Use this to start fresh.
+            </p>
+            <button
+              onClick={async () => {
+                if (!confirm('⚠️ WARNING: This will remove ALL players and reset the game!\n\nAre you sure you want to continue?')) {
+                  return;
+                }
+                setLoading(true);
+                setError('');
+                try {
+                  const response = await fetch('/api/game/reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: ADMIN_PASSWORD })
+                  });
+                  
+                  if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to reset game');
+                  }
+                  
+                  const data = await response.json();
+                  console.log('Game reset successful:', data);
+                  setError('');
+                  // State will update via Pusher event
+                } catch (err) {
+                  console.error('Error resetting game:', err);
+                  setError(err.message || 'Failed to reset game');
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              disabled={loading}
+              className="px-8 py-4 bg-red-600 text-white font-impact text-xl rounded border-4 border-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg transform hover:scale-105"
+            >
+              {loading ? '⏳ Resetting...' : '🔄 RESET SESSION (Kick All Players)'}
+            </button>
+          </div>
+
           {/* Start Session Button */}
           {startGame && gameState && (
             <div className="bg-white bg-opacity-20 p-6 rounded-lg border-4 border-christmas-gold mb-6">

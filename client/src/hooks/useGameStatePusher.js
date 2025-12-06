@@ -191,12 +191,23 @@ export function useGameStatePusher() {
       }
     };
 
+    const handleGameReset = (data) => {
+      console.log('🔄 Received game-reset event:', data);
+      if (data.gameState) {
+        console.log('Game reset - updating state:', data.gameState);
+        setGameState(data.gameState);
+        // If player was in game, they should see the lobby again
+        // The hasJoined state will be handled by the App component
+      }
+    };
+
     // Bind all events
     channel.bind('player-joined', handlePlayerJoined);
     channel.bind('game-started', handleGameStarted);
     channel.bind('gift-opened', handleGiftOpened);
     channel.bind('gift-stolen', handleGiftStolen);
     channel.bind('player-left', handlePlayerLeft);
+    channel.bind('game-reset', handleGameReset);
     
     console.log('✅ Pusher event listeners bound');
 
@@ -207,6 +218,7 @@ export function useGameStatePusher() {
       channel.unbind('gift-opened', handleGiftOpened);
       channel.unbind('gift-stolen', handleGiftStolen);
       channel.unbind('player-left', handlePlayerLeft);
+      channel.unbind('game-reset', handleGameReset);
     };
   }, [channel]);
 

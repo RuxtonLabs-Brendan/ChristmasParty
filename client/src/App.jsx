@@ -26,6 +26,20 @@ function GameApp() {
   const [openingGiftId, setOpeningGiftId] = useState(null);
   const [stealingGiftId, setStealingGiftId] = useState(null);
 
+  // Handle game reset - if game is reset, return players to lobby
+  useEffect(() => {
+    // If game phase is lobby and there are no players, reset hasJoined
+    // This handles the case where admin resets the game
+    if (gameState.phase === GAME_PHASES.LOBBY && gameState.players?.length === 0) {
+      // Check if current player is still in the list
+      const isPlayerStillInGame = gameState.players?.some(p => p.id === currentPlayerId);
+      if (!isPlayerStillInGame && hasJoined) {
+        console.log('Game was reset - returning to lobby');
+        setHasJoined(false);
+      }
+    }
+  }, [gameState.phase, gameState.players, currentPlayerId, hasJoined]);
+
   // Handle gift animations (handled by Pusher events in useGameStatePusher)
   useEffect(() => {
     // These will be triggered by gameState updates from Pusher
