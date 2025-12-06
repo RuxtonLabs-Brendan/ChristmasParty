@@ -34,40 +34,61 @@ export function useGameStatePusher() {
 
   // Listen to Pusher events
   useEffect(() => {
-    if (!channel) return;
+    if (!channel) {
+      console.log('⏳ Waiting for Pusher channel...');
+      return;
+    }
+
+    console.log('📡 Setting up Pusher event listeners...');
 
     const handlePlayerJoined = (data) => {
-      console.log('Received player-joined event:', data);
-      setGameState(data.gameState);
+      console.log('🎉 Received player-joined event:', data);
+      console.log('New game state:', data.gameState);
+      console.log('Players in new state:', data.gameState?.players);
+      if (data.gameState) {
+        setGameState(data.gameState);
+      }
     };
 
     const handleGameStarted = (data) => {
-      console.log('Received game-started event:', data);
-      setGameState(data.gameState);
+      console.log('🎮 Received game-started event:', data);
+      if (data.gameState) {
+        setGameState(data.gameState);
+      }
     };
 
     const handleGiftOpened = (data) => {
-      console.log('Received gift-opened event:', data);
-      setGameState(data.gameState);
+      console.log('🎁 Received gift-opened event:', data);
+      if (data.gameState) {
+        setGameState(data.gameState);
+      }
     };
 
     const handleGiftStolen = (data) => {
-      console.log('Received gift-stolen event:', data);
-      setGameState(data.gameState);
+      console.log('🔄 Received gift-stolen event:', data);
+      if (data.gameState) {
+        setGameState(data.gameState);
+      }
     };
 
     const handlePlayerLeft = (data) => {
-      console.log('Received player-left event:', data);
-      setGameState(data.gameState);
+      console.log('👋 Received player-left event:', data);
+      if (data.gameState) {
+        setGameState(data.gameState);
+      }
     };
 
+    // Bind all events
     channel.bind('player-joined', handlePlayerJoined);
     channel.bind('game-started', handleGameStarted);
     channel.bind('gift-opened', handleGiftOpened);
     channel.bind('gift-stolen', handleGiftStolen);
     channel.bind('player-left', handlePlayerLeft);
+    
+    console.log('✅ Pusher event listeners bound');
 
     return () => {
+      console.log('🧹 Cleaning up Pusher event listeners');
       channel.unbind('player-joined', handlePlayerJoined);
       channel.unbind('game-started', handleGameStarted);
       channel.unbind('gift-opened', handleGiftOpened);
@@ -78,21 +99,37 @@ export function useGameStatePusher() {
 
   const joinGame = async (name, emoji) => {
     try {
+      console.log('Joining game:', { name, emoji, playerId });
+      console.log('API_BASE:', API_BASE);
+      
       const response = await fetch(`${API_BASE}/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, emoji, playerId })
       });
       
+      console.log('Join response status:', response.status);
+      
       if (!response.ok) {
-        const error = await response.json();
+        const errorText = await response.text();
+        console.error('Join error response:', errorText);
+        let error;
+        try {
+          error = JSON.parse(errorText);
+        } catch {
+          error = { error: errorText || 'Failed to join game' };
+        }
         throw new Error(error.error || 'Failed to join game');
       }
       
       const data = await response.json();
-      setGameState(data.gameState);
+      console.log('Join successful, received data:', data);
+      console.log('Game state from join:', data.gameState);
+      if (data.gameState) {
+        setGameState(data.gameState);
+      }
     } catch (error) {
-      console.error('Error joining game:', error);
+      console.error('❌ Error joining game:', error);
       throw error;
     }
   };

@@ -442,6 +442,23 @@ export async function getAdminGifts() {
 }
 
 export async function updateAdminGift(giftId, name, image) {
+  if (!pool) {
+    // In-memory mode - update in-memory store
+    if (!global._inMemoryAdminGifts) {
+      throw new Error('Gift not found');
+    }
+    const giftIndex = global._inMemoryAdminGifts.findIndex(g => g.id === giftId);
+    if (giftIndex === -1) {
+      throw new Error('Gift not found');
+    }
+    global._inMemoryAdminGifts[giftIndex] = {
+      ...global._inMemoryAdminGifts[giftIndex],
+      name: name.trim(),
+      image: image || ''
+    };
+    return global._inMemoryAdminGifts[giftIndex];
+  }
+  
   const result = await pool.query(
     'UPDATE admin_gifts SET name = $1, image = $2 WHERE gift_id = $3 RETURNING *',
     [name, image || '', giftId]

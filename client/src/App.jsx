@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useGameStatePusher } from './hooks/useGameStatePusher';
 import { GAME_PHASES } from '../../shared/types.js';
 import Lobby from './components/Lobby';
@@ -8,10 +9,11 @@ import WrappedGifts from './components/WrappedGifts';
 import PlayerSeats from './components/PlayerSeats';
 import OpenedGiftsRing from './components/OpenedGiftsRing';
 import GameUI from './components/GameUI';
-import AdminPortal from './components/AdminPortal';
+import AdminPage from './pages/AdminPage';
 
-function App() {
+function GameApp() {
   const { gameState, joinGame, startGame, openGift, stealGift, isCurrentPlayer, isHost, currentPlayerId, connected } = useGameStatePusher();
+  const navigate = useNavigate();
   
   // Debug logging
   useEffect(() => {
@@ -19,10 +21,10 @@ function App() {
     console.log('App - players count:', gameState.players?.length);
     console.log('App - players array:', gameState.players);
   }, [gameState]);
+  
   const [hasJoined, setHasJoined] = useState(false);
   const [openingGiftId, setOpeningGiftId] = useState(null);
   const [stealingGiftId, setStealingGiftId] = useState(null);
-  const [showAdmin, setShowAdmin] = useState(false);
 
   // Handle gift animations (handled by Pusher events in useGameStatePusher)
   useEffect(() => {
@@ -56,15 +58,8 @@ function App() {
           isHost={gameState.hostId === currentPlayerId}
           playerCount={gameState.players?.length || 0}
           players={gameState.players || []}
-          onOpenAdmin={() => setShowAdmin(true)}
+          onOpenAdmin={() => navigate('/admin')}
         />
-        {showAdmin && (
-          <AdminPortal 
-            onClose={() => setShowAdmin(false)} 
-            startGame={startGame}
-            gameState={gameState}
-          />
-        )}
       </>
     );
   }
@@ -76,16 +71,8 @@ function App() {
         connected={connected}
         isHost={isHost()}
         onStartGame={startGame}
-        onOpenAdmin={() => setShowAdmin(true)}
+        onOpenAdmin={() => navigate('/admin')}
       />
-      
-      {showAdmin && (
-        <AdminPortal 
-          onClose={() => setShowAdmin(false)} 
-          startGame={startGame}
-          gameState={gameState}
-        />
-      )}
       
       <GameBoard>
         <ChristmasTree />
@@ -110,6 +97,15 @@ function App() {
         />
       </GameBoard>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/admin" element={<AdminPage />} />
+      <Route path="*" element={<GameApp />} />
+    </Routes>
   );
 }
 

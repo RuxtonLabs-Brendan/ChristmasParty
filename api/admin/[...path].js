@@ -195,6 +195,31 @@ export default async function handler(req, res) {
         }
       }
 
+      if (req.method === 'PUT') {
+        // Update a gift
+        if (!giftId) {
+          return res.status(400).json({ error: 'Gift ID is required for update' });
+        }
+
+        const { name, image } = body;
+        
+        if (!name || typeof name !== 'string' || !name.trim()) {
+          return res.status(400).json({ error: 'Gift name is required' });
+        }
+
+        try {
+          const updatedGift = await db.updateAdminGift(giftId, name.trim(), (image || '').trim());
+          const gifts = await db.getAdminGifts();
+          return res.status(200).json({ 
+            gift: updatedGift, 
+            gifts: gifts || [] 
+          });
+        } catch (error) {
+          console.error('Error updating gift:', error);
+          return res.status(500).json({ error: error.message || 'Failed to update gift' });
+        }
+      }
+
       if (req.method === 'DELETE') {
         // Check if deleting specific gift or clearing all
         // If giftId is set, delete specific gift. Otherwise clear all.

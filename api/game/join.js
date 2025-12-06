@@ -44,31 +44,53 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('Join handler called');
+    console.log('Pusher config check:', {
+      hasAppId: !!process.env.PUSHER_APP_ID,
+      hasKey: !!process.env.PUSHER_KEY,
+      hasSecret: !!process.env.PUSHER_SECRET,
+      cluster: process.env.PUSHER_CLUSTER
+    });
+
     await ensureDb();
 
     const { name, emoji, playerId } = req.body || {};
+    console.log('Join request body:', { name, emoji, playerId });
     
     if (!name || !name.trim() || !emoji || !playerId) {
+      console.error('Missing required fields:', { name: !!name, emoji: !!emoji, playerId: !!playerId });
       return res.status(400).json({ error: 'Name, emoji, and playerId are required' });
     }
 
     // Add player using playerId instead of socket.id
+    console.log('Adding player to game state...');
     const player = await gameState.addPlayer(playerId, name.trim(), emoji);
-    console.log(`Player joined: ${player.name} (${player.emoji})`);
+    console.log(`✅ Player joined: ${player.name} (${player.emoji})`);
     
     const state = await gameState.getState();
+    console.log('Current game state:', {
+      playersCount: state.players?.length || 0,
+      players: state.players
+    });
     
     // Broadcast to all clients via Pusher
-    await pusher.trigger('game-channel', 'player-joined', {
-      player: {
-        id: player.id,
-        name: player.name,
-        emoji: player.emoji,
-        gifts: player.gifts || [],
-        isConnected: true
-      },
-      gameState: state
-    });
+    console.log('Broadcasting player-joined event via Pusher...');
+    try {
+      await pusher.trigger('game-channel', 'player-joined', {
+        player: {
+          id: player.id,
+          name: player.name,
+          emoji: player.emoji,
+          gifts: player.gifts || [],
+          isConnected: true
+        },
+        gameState: state
+      });
+      console.log('✅ Pusher event broadcasted successfully');
+    } catch (pusherError) {
+      console.error('❌ Pusher broadcast error:', pusherError);
+      // Still return success, but log the error
+    }
 
     return res.status(200).json({ 
       success: true, 
@@ -76,7 +98,8 @@ export default async function handler(req, res) {
       gameState: state 
     });
   } catch (error) {
-    console.error('Error in join handler:', error);
+    console.error('❌ Error in join handler:', error);
+    console.error('Error stack:', error.stack);
     return res.status(500).json({ error: error.message || 'Failed to join game' });
   }
 }
