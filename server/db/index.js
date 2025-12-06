@@ -5,34 +5,43 @@ dotenv.config();
 
 const { Pool } = pg;
 
-// Validate DATABASE_URL
+// Validate DATABASE_URL - warn but don't exit in production
 if (!process.env.DATABASE_URL) {
-  console.error('ERROR: DATABASE_URL environment variable is not set!');
-  console.error('Please create a .env file in the server directory with your Neon connection string.');
-  console.error('Example: DATABASE_URL=postgresql://username:password@hostname/database?sslmode=require');
-  process.exit(1);
+  console.warn('WARNING: DATABASE_URL environment variable is not set!');
+  console.warn('Database features will be disabled. Game state will be in-memory only.');
+  console.warn('To enable database persistence, set DATABASE_URL in your environment.');
 }
 
-// Create connection pool
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('localhost') ? false : {
-    rejectUnauthorized: false
-  }
-});
+// Create connection pool only if DATABASE_URL is set
+let pool = null;
+if (process.env.DATABASE_URL) {
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_URL?.includes('localhost') ? false : {
+      rejectUnauthorized: false
+    }
+  });
+}
 
-// Test connection
-pool.on('connect', () => {
-  console.log('Connected to Neon database');
-});
+// Test connection only if pool exists
+if (pool) {
+  pool.on('connect', () => {
+    console.log('Connected to Neon database');
+  });
 
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
-  process.exit(-1);
-});
+  pool.on('error', (err) => {
+    console.error('Unexpected error on idle client', err);
+    process.exit(-1);
+  });
+}
 
 // Initialize database schema
 export async function initDatabase() {
+  if (!pool) {
+    console.log('Database not configured, skipping schema initialization');
+    return;
+  }
+  
   try {
     const fs = await import('fs/promises');
     const path = await import('path');
@@ -68,6 +77,11 @@ export async function initDatabase() {
 
 // Game operations
 export async function createGame() {
+  if (!pool) {
+    // Return a mock game object if database is not available
+    return { id: 'in-memory-game', phase: 'lobby', current_turn_index: 0 };
+  }
+  
   const result = await pool.query(
     'INSERT INTO games (phase, current_turn_index) VALUES ($1, $2) RETURNING *',
     ['lobby', 0]
@@ -76,6 +90,7 @@ export async function createGame() {
 }
 
 export async function getGame(gameId) {
+  if (!pool) return null;
   const result = await pool.query('SELECT * FROM games WHERE id = $1', [gameId]);
   return result.rows[0];
 }
@@ -116,6 +131,10 @@ export async function resetGame(gameId) {
 
 // Player operations
 export async function addPlayer(gameId, socketId, name, emoji) {
+  if (!pool) {
+    // In-memory fallback - return mock player
+    return { id: socketId, socket_id: socketId, name, emoji, is_connected: true };
+  }
   const result = await pool.query(
     `INSERT INTO players (game_id, socket_id, name, emoji, is_connected)
      VALUES ($1, $2, $3, $4, true)
@@ -142,6 +161,8 @@ export async function setPlayerConnected(gameId, socketId, isConnected) {
 }
 
 export async function getPlayers(gameId) {
+  if (!pool) return [];
+  
   const result = await pool.query(
     `SELECT p.id, p.socket_id, p.name, p.emoji, p.is_connected, p.created_at,
      COALESCE(
@@ -175,6 +196,10 @@ export async function getPlayerBySocketId(gameId, socketId) {
 
 // Gift operations
 export async function addGifts(gameId, gifts) {
+  if (!pool) {
+    // In-memory mode - gifts are handled by gameState cache
+    return;
+  }
   await pool.query('BEGIN');
   try {
     for (const gift of gifts) {
@@ -204,6 +229,7 @@ export async function addGifts(gameId, gifts) {
 }
 
 export async function getGifts(gameId) {
+  if (!pool) return [];
   const result = await pool.query(
     `SELECT g.*, p.socket_id as owner_socket_id
      FROM gifts g
@@ -374,6 +400,19 @@ export async function stealGift(gameId, giftId, playerSocketId) {
 
 // Admin gifts operations
 export async function addAdminGift(name, image) {
+  if (!pool) {
+    // In-memory fallback for admin gifts
+    const inMemoryGifts = global._inMemoryAdminGifts || [];
+    const gift = {
+      id: `admin-gift-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name,
+      image,
+      added_at: new Date().toISOString()
+    };
+    inMemoryGifts.push(gift);
+    global._inMemoryAdminGifts = inMemoryGifts;
+    return gift;
+  }
   const giftId = `admin-gift-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   const result = await pool.query(
     'INSERT INTO admin_gifts (gift_id, name, image) VALUES ($1, $2, $3) RETURNING *',
@@ -388,6 +427,9 @@ export async function addAdminGift(name, image) {
 }
 
 export async function getAdminGifts() {
+  if (!pool) {
+    return global._inMemoryAdminGifts || [];
+  }
   const result = await pool.query(
     'SELECT * FROM admin_gifts ORDER BY added_at DESC'
   );
@@ -416,10 +458,20 @@ export async function updateAdminGift(giftId, name, image) {
 }
 
 export async function deleteAdminGift(giftId) {
+  if (!pool) {
+    if (global._inMemoryAdminGifts) {
+      global._inMemoryAdminGifts = global._inMemoryAdminGifts.filter(g => g.id !== giftId);
+    }
+    return;
+  }
   await pool.query('DELETE FROM admin_gifts WHERE gift_id = $1', [giftId]);
 }
 
 export async function clearAdminGifts() {
+  if (!pool) {
+    global._inMemoryAdminGifts = [];
+    return;
+  }
   await pool.query('DELETE FROM admin_gifts');
 }
 

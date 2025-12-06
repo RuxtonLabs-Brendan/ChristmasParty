@@ -11,9 +11,16 @@ class GameState {
 
   async ensureGame() {
     if (!this.gameId) {
-      const game = await db.createGame();
-      this.gameId = game.id;
-      this._gameCache = game;
+      try {
+        const game = await db.createGame();
+        this.gameId = game.id;
+        this._gameCache = game;
+      } catch (error) {
+        console.error('Database error in ensureGame:', error.message);
+        // Fallback to in-memory game ID
+        this.gameId = 'in-memory-game';
+        this._gameCache = { id: 'in-memory-game', phase: 'lobby', current_turn_index: 0 };
+      }
     }
     return this.gameId;
   }
@@ -21,15 +28,23 @@ class GameState {
   async refreshCache() {
     if (!this.gameId) return;
     
-    const [game, players, gifts] = await Promise.all([
-      db.getGame(this.gameId),
-      db.getPlayers(this.gameId),
-      db.getGifts(this.gameId)
-    ]);
-    
-    this._gameCache = game;
-    this._playersCache = players;
-    this._giftsCache = gifts;
+    try {
+      const [game, players, gifts] = await Promise.all([
+        db.getGame(this.gameId),
+        db.getPlayers(this.gameId),
+        db.getGifts(this.gameId)
+      ]);
+      
+      this._gameCache = game || this._gameCache;
+      this._playersCache = players || [];
+      this._giftsCache = gifts || [];
+    } catch (error) {
+      console.error('Database error in refreshCache:', error.message);
+      // Keep existing cache if database fails
+      this._gameCache = this._gameCache || { id: this.gameId, phase: 'lobby', current_turn_index: 0 };
+      this._playersCache = this._playersCache || [];
+      this._giftsCache = this._giftsCache || [];
+    }
   }
 
   get players() {
