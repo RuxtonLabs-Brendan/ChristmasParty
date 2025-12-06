@@ -15,10 +15,14 @@ export function useGameState(socket) {
     if (!socket) return;
 
     const handleGameState = (state) => {
+      console.log('Received game-state event:', state);
+      console.log('Players in state:', state.players);
       setGameState(state);
     };
 
     const handlePlayerJoined = ({ gameState: newState }) => {
+      console.log('Received player-joined event:', newState);
+      console.log('Players after join:', newState.players);
       setGameState(newState);
     };
 
@@ -64,8 +68,11 @@ export function useGameState(socket) {
 
   const joinGame = (name, emoji) => {
     if (socket) {
+      console.log('Emitting player-join:', { name, emoji, socketId: socket.id });
       socket.emit('player-join', { name, emoji });
       setCurrentPlayerId(socket.id);
+    } else {
+      console.error('Cannot join game: socket is null');
     }
   };
 

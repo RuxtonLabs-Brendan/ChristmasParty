@@ -2,6 +2,12 @@ import { useState } from 'react';
 import { CHRISTMAS_EMOJIS } from '../../../shared/types.js';
 
 export default function Lobby({ onJoin, isHost, playerCount, players = [], onOpenAdmin }) {
+  // Debug logging
+  console.log('Lobby render - playerCount:', playerCount, 'players:', players, 'players.length:', players?.length);
+  
+  // Ensure playerCount matches actual players array length
+  const actualPlayerCount = players?.length || 0;
+  const displayCount = Math.max(playerCount, actualPlayerCount);
   const [name, setName] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState('🎄');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -76,12 +82,12 @@ export default function Lobby({ onJoin, isHost, playerCount, players = [], onOpe
               <div className="text-4xl">👥</div>
               <div className="text-center">
                 <div className="text-3xl font-impact text-christmas-gold drop-shadow-lg">
-                  {playerCount}
+                  {displayCount}
                 </div>
                 <div className="text-lg font-impact text-christmas-gold">
-                  {playerCount === 0 
+                  {displayCount === 0 
                     ? 'No players yet' 
-                    : playerCount === 1 
+                    : displayCount === 1 
                     ? 'Player waiting' 
                     : 'Players waiting'}
                 </div>
@@ -106,10 +112,10 @@ export default function Lobby({ onJoin, isHost, playerCount, players = [], onOpe
             )}
             
             {/* Status Message */}
-            {playerCount > 0 && (
+            {displayCount > 0 && (
               <div className="mt-3 pt-3 border-t-2 border-christmas-gold border-opacity-30">
                 <p className="text-center text-christmas-gold text-sm font-impact">
-                  {playerCount < 2 
+                  {displayCount < 2 
                     ? '⏳ Waiting for more players to join...' 
                     : '✅ Ready to start! (Host can start the game)'}
                 </p>

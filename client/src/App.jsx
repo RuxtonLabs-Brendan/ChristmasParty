@@ -14,6 +14,13 @@ import AdminPortal from './components/AdminPortal';
 function App() {
   const { socket, connected } = useSocket();
   const { gameState, joinGame, startGame, openGift, stealGift, isCurrentPlayer, isHost, currentPlayerId } = useGameState(socket);
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('App - gameState updated:', gameState);
+    console.log('App - players count:', gameState.players?.length);
+    console.log('App - players array:', gameState.players);
+  }, [gameState]);
   const [hasJoined, setHasJoined] = useState(false);
   const [openingGiftId, setOpeningGiftId] = useState(null);
   const [stealingGiftId, setStealingGiftId] = useState(null);
@@ -65,8 +72,8 @@ function App() {
         <Lobby
           onJoin={handleJoin}
           isHost={gameState.hostId === socket?.id}
-          playerCount={gameState.players.length}
-          players={gameState.players}
+          playerCount={gameState.players?.length || 0}
+          players={gameState.players || []}
           onOpenAdmin={() => setShowAdmin(true)}
         />
         {showAdmin && (
