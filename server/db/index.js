@@ -135,6 +135,17 @@ export async function getLatestGame() {
   }
 }
 
+export async function getAnyGame() {
+  if (!pool) return null;
+  try {
+    const result = await pool.query('SELECT * FROM games ORDER BY created_at DESC LIMIT 1');
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('getAnyGame error:', error);
+    return null;
+  }
+}
+
 export async function updateGame(gameId, updates) {
   const fields = Object.keys(updates);
   const values = Object.values(updates);

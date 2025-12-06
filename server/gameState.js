@@ -214,7 +214,28 @@ class GameState {
     const latestGame = await db.getLatestGame();
     
     if (!latestGame) {
-      console.log('getState: No game found with players, returning empty state');
+      console.log('getState: No game found with players, checking all games...');
+      // Try to find ANY game, even without players (might be a new game)
+      // We need to import pool or use a helper function
+      try {
+        // Use a direct query through db module if available
+        const anyGame = await db.getAnyGame();
+        if (anyGame) {
+          console.log(`getState: Found game ${anyGame.id} without players yet`);
+          const players = await db.getPlayers(anyGame.id);
+          return {
+            players: players || [],
+            gifts: [],
+            currentTurnIndex: anyGame.current_turn_index || 0,
+            phase: anyGame.phase || GAME_PHASES.LOBBY,
+            hostId: anyGame.host_id || null
+          };
+        }
+      } catch (err) {
+        console.error('getState: Error checking all games:', err);
+      }
+      
+      console.log('getState: No game found, returning empty state');
       return {
         players: [],
         gifts: [],
@@ -233,6 +254,8 @@ class GameState {
       db.getPlayers(latestGame.id),
       db.getGifts(latestGame.id)
     ]);
+    
+    console.log(`getState: Fetched ${players?.length || 0} players, ${gifts?.length || 0} gifts`);
     
     this._playersCache = players || [];
     this._giftsCache = gifts || [];
