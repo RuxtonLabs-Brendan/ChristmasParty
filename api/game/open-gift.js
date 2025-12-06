@@ -59,22 +59,34 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Game not in progress' });
     }
 
+    console.log('Open gift: Attempting to open gift', giftId, 'for player', playerId);
     const gift = await gameState.openGift(giftId);
+    console.log('Open gift: Result:', gift ? 'Success' : 'Failed');
     
     if (gift) {
+      console.log('Open gift: Getting updated state...');
       const updatedState = await gameState.getState();
+      console.log('Open gift: Updated state has', updatedState.players?.length || 0, 'players and', updatedState.gifts?.length || 0, 'gifts');
       
-      await pusher.trigger('game-channel', 'gift-opened', {
-        gift,
-        gameState: updatedState
-      });
+      try {
+        await pusher.trigger('game-channel', 'gift-opened', {
+          gift,
+          gameState: updatedState
+        });
+        console.log('Open gift: Pusher event sent successfully');
+      } catch (pusherError) {
+        console.error('Open gift: Pusher error (non-fatal):', pusherError);
+        // Continue even if Pusher fails
+      }
 
       return res.status(200).json({ success: true, gift, gameState: updatedState });
     } else {
+      console.log('Open gift: Cannot open gift (already opened or invalid)');
       return res.status(400).json({ error: 'Cannot open that gift' });
     }
   } catch (error) {
     console.error('Error opening gift:', error);
+    console.error('Error stack:', error.stack);
     return res.status(500).json({ error: error.message || 'Failed to open gift' });
   }
 }

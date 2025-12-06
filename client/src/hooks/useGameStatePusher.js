@@ -213,6 +213,7 @@ export function useGameStatePusher() {
 
   const openGift = async (giftId) => {
     try {
+      console.log('Opening gift:', giftId);
       const response = await fetch(`${API_BASE}/open-gift`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -220,17 +221,34 @@ export function useGameStatePusher() {
       });
       
       if (!response.ok) {
-        const error = await response.json();
+        const errorText = await response.text();
+        let error;
+        try {
+          error = JSON.parse(errorText);
+        } catch {
+          error = { error: errorText || 'Failed to open gift' };
+        }
+        console.error('Open gift error response:', error);
         throw new Error(error.error || 'Failed to open gift');
+      }
+      
+      const data = await response.json();
+      console.log('Open gift success:', data);
+      
+      // Update state if provided
+      if (data.gameState) {
+        setGameState(data.gameState);
       }
     } catch (error) {
       console.error('Error opening gift:', error);
-      throw error;
+      // Don't throw - let Pusher event handle the update
+      // This prevents the app from crashing
     }
   };
 
   const stealGift = async (giftId) => {
     try {
+      console.log('Stealing gift:', giftId);
       const response = await fetch(`${API_BASE}/steal-gift`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -238,12 +256,28 @@ export function useGameStatePusher() {
       });
       
       if (!response.ok) {
-        const error = await response.json();
+        const errorText = await response.text();
+        let error;
+        try {
+          error = JSON.parse(errorText);
+        } catch {
+          error = { error: errorText || 'Failed to steal gift' };
+        }
+        console.error('Steal gift error response:', error);
         throw new Error(error.error || 'Failed to steal gift');
+      }
+      
+      const data = await response.json();
+      console.log('Steal gift success:', data);
+      
+      // Update state if provided
+      if (data.gameState) {
+        setGameState(data.gameState);
       }
     } catch (error) {
       console.error('Error stealing gift:', error);
-      throw error;
+      // Don't throw - let Pusher event handle the update
+      // This prevents the app from crashing
     }
   };
 

@@ -38,15 +38,31 @@ function GameApp() {
   };
 
   const handleGiftClick = (giftId) => {
-    const gift = gameState.gifts?.find(g => g.id === giftId);
-    if (!gift) return;
+    try {
+      const gift = gameState.gifts?.find(g => g.id === giftId);
+      if (!gift) {
+        console.warn('Gift not found:', giftId);
+        return;
+      }
 
-    if (!gift.isOpened) {
-      // Open wrapped gift
-      openGift(giftId);
-    } else {
-      // Steal opened gift
-      stealGift(giftId);
+      if (!gift.isOpened) {
+        // Open wrapped gift
+        console.log('Opening wrapped gift:', giftId);
+        openGift(giftId).catch(error => {
+          console.error('Error in handleGiftClick (open):', error);
+          // Error is already logged in openGift, just prevent crash
+        });
+      } else {
+        // Steal opened gift
+        console.log('Stealing opened gift:', giftId);
+        stealGift(giftId).catch(error => {
+          console.error('Error in handleGiftClick (steal):', error);
+          // Error is already logged in stealGift, just prevent crash
+        });
+      }
+    } catch (error) {
+      console.error('Error in handleGiftClick:', error);
+      // Prevent app crash
     }
   };
 

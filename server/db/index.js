@@ -368,11 +368,19 @@ export async function getGifts(gameId) {
 }
 
 export async function openGift(gameId, giftId, playerSocketId) {
+  if (!pool) {
+    console.log('openGift: No database pool, skipping open gift');
+    return null;
+  }
+  
   await pool.query('BEGIN');
   try {
     // Get player ID
     const player = await getPlayerBySocketId(gameId, playerSocketId);
-    if (!player) throw new Error('Player not found');
+    if (!player) {
+      await pool.query('ROLLBACK');
+      throw new Error('Player not found');
+    }
     
     // Update gift
     const giftResult = await pool.query(
@@ -421,11 +429,19 @@ export async function openGift(gameId, giftId, playerSocketId) {
 }
 
 export async function stealGift(gameId, giftId, playerSocketId) {
+  if (!pool) {
+    console.log('stealGift: No database pool, skipping steal gift');
+    return null;
+  }
+  
   await pool.query('BEGIN');
   try {
     // Get current player
     const currentPlayer = await getPlayerBySocketId(gameId, playerSocketId);
-    if (!currentPlayer) throw new Error('Player not found');
+    if (!currentPlayer) {
+      await pool.query('ROLLBACK');
+      throw new Error('Player not found');
+    }
     
     // Get gift with owner info
     const giftResult = await pool.query(

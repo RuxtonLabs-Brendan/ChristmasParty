@@ -201,16 +201,32 @@ class GameState {
 
   async nextTurn() {
     const gameId = await this.ensureGame();
-    const newIndex = this.currentTurnIndex + 1;
+    if (!gameId) {
+      console.error('nextTurn: No gameId available');
+      return;
+    }
     
-    // Check if game is over
     await this.refreshCache();
+    
+    // Safety checks
+    if (!this.gifts || this.gifts.length === 0) {
+      console.warn('nextTurn: No gifts found, skipping turn advancement');
+      return;
+    }
+    
+    if (!this.players || this.players.length === 0) {
+      console.warn('nextTurn: No players found, skipping turn advancement');
+      return;
+    }
+    
+    const newIndex = this.currentTurnIndex + 1;
     const allOpened = this.gifts.every(g => g.isOpened);
     const totalTurns = this.players.length + this.gifts.length;
     
     const updates = { currentTurnIndex: newIndex };
     if (allOpened && newIndex >= totalTurns) {
       updates.phase = GAME_PHASES.ENDED;
+      console.log('nextTurn: Game ended');
     }
     
     await db.updateGame(gameId, updates);
