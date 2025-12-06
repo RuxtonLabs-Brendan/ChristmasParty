@@ -12,9 +12,19 @@ class GameState {
   async ensureGame() {
     if (!this.gameId) {
       try {
-        const game = await db.createGame();
-        this.gameId = game.id;
-        this._gameCache = game;
+        // First, try to find an existing game with players
+        const existingGame = await db.getLatestGame();
+        if (existingGame) {
+          console.log(`ensureGame: Found existing game ${existingGame.id}`);
+          this.gameId = existingGame.id;
+          this._gameCache = existingGame;
+        } else {
+          // No existing game, create a new one
+          console.log('ensureGame: No existing game found, creating new game');
+          const game = await db.createGame();
+          this.gameId = game.id;
+          this._gameCache = game;
+        }
       } catch (error) {
         console.error('Database error in ensureGame:', error.message);
         // Fallback to in-memory game ID
@@ -26,20 +36,27 @@ class GameState {
   }
 
   async refreshCache() {
-    if (!this.gameId) return;
+    if (!this.gameId) {
+      console.log('refreshCache: No gameId, skipping refresh');
+      return;
+    }
     
     try {
+      console.log(`refreshCache: Refreshing cache for gameId: ${this.gameId}`);
       const [game, players, gifts] = await Promise.all([
         db.getGame(this.gameId),
         db.getPlayers(this.gameId),
         db.getGifts(this.gameId)
       ]);
       
+      console.log(`refreshCache: Fetched ${players?.length || 0} players, ${gifts?.length || 0} gifts`);
+      
       this._gameCache = game || this._gameCache;
       this._playersCache = players || [];
       this._giftsCache = gifts || [];
     } catch (error) {
       console.error('Database error in refreshCache:', error.message);
+      console.error('Error stack:', error.stack);
       // Keep existing cache if database fails
       this._gameCache = this._gameCache || { id: this.gameId, phase: 'lobby', current_turn_index: 0 };
       this._playersCache = this._playersCache || [];
@@ -183,14 +200,27 @@ class GameState {
   }
 
   async getState() {
+    // Always ensure game exists and refresh cache
+    await this.ensureGame();
     await this.refreshCache();
-    return {
-      players: this.players,
-      gifts: this.gifts,
-      currentTurnIndex: this.currentTurnIndex,
-      phase: this.phase,
-      hostId: this.hostId
+    
+    const state = {
+      players: this.players || [],
+      gifts: this.gifts || [],
+      currentTurnIndex: this.currentTurnIndex || 0,
+      phase: this.phase || GAME_PHASES.LOBBY,
+      hostId: this.hostId || null
     };
+    
+    console.log('getState() returning:', {
+      playersCount: state.players.length,
+      players: state.players.map(p => ({ id: p.id, name: p.name, emoji: p.emoji })),
+      phase: state.phase,
+      hostId: state.hostId,
+      gameId: this.gameId
+    });
+    
+    return state;
   }
 
   async addAdminGift(product) {

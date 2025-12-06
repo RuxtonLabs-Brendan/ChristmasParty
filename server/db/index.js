@@ -95,6 +95,18 @@ export async function getGame(gameId) {
   return result.rows[0];
 }
 
+export async function getLatestGame() {
+  if (!pool) return null;
+  // Get the most recent game that has players
+  const result = await pool.query(
+    `SELECT g.* FROM games g
+     WHERE EXISTS (SELECT 1 FROM players p WHERE p.game_id = g.id)
+     ORDER BY g.created_at DESC
+     LIMIT 1`
+  );
+  return result.rows[0] || null;
+}
+
 export async function updateGame(gameId, updates) {
   const fields = Object.keys(updates);
   const values = Object.values(updates);
