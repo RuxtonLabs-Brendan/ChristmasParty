@@ -69,6 +69,10 @@ export default function AdminPage() {
         timestamp: now.toISOString(),
         connected: connected
       });
+      console.log('AdminPage - Full gameState object:', JSON.stringify(gameState, null, 2));
+      console.log('AdminPage - Players array:', gameState.players);
+      console.log('AdminPage - Is players array?', Array.isArray(gameState.players));
+      console.log('AdminPage - Players length:', gameState.players?.length);
     }
   }, [gameState, startingGame, connected]);
 

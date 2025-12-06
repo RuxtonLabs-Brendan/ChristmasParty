@@ -221,8 +221,8 @@ class GameState {
     // In serverless, we can't rely on instance state, so always query fresh
     console.log('getState: Starting fresh query...');
     
-    // Strategy: Always find the most recent game with players
-    // If no game with players exists, find the most recent game (might have players being added)
+    // Strategy: Find the most recent game, then check if it has players
+    // This handles the case where a game was just created but players haven't been added yet
     let targetGame = await db.getLatestGame();
     
     if (!targetGame) {
@@ -230,9 +230,11 @@ class GameState {
       targetGame = await db.getAnyGame();
       
       if (targetGame) {
-        console.log(`getState: Found game ${targetGame.id} (may not have players yet)`);
-        // Check if it actually has players now
+        console.log(`getState: Found game ${targetGame.id} (checking for players)...`);
+        // Check if it actually has players now (might have been added between queries)
         const players = await db.getPlayers(targetGame.id);
+        console.log(`getState: Game ${targetGame.id} has ${players.length} players`);
+        
         if (players.length === 0) {
           console.log('getState: Game exists but has no players, returning empty state');
           return {
@@ -244,6 +246,7 @@ class GameState {
           };
         }
         // Game has players, use it
+        console.log(`getState: Game ${targetGame.id} has players, using it`);
       } else {
         console.log('getState: No game found at all, returning empty state');
         return {
@@ -261,7 +264,7 @@ class GameState {
     this._gameCache = targetGame;
     
     // Fetch players and gifts directly from database
-    const [players, gifts] = await Promise.all([
+    let [players, gifts] = await Promise.all([
       db.getPlayers(targetGame.id),
       db.getGifts(targetGame.id)
     ]);
@@ -269,6 +272,15 @@ class GameState {
     console.log(`getState: Fetched ${players?.length || 0} players, ${gifts?.length || 0} gifts`);
     if (players.length > 0) {
       console.log('getState: Players:', players.map(p => ({ id: p.id, name: p.name, emoji: p.emoji })));
+    } else {
+      console.log('getState: WARNING - No players found for game', targetGame.id);
+      // Double-check by querying directly (in case of timing issues)
+      const directCheck = await db.getPlayers(targetGame.id);
+      console.log(`getState: Direct check found ${directCheck.length} players`);
+      if (directCheck.length > 0) {
+        console.log('getState: Using direct check results');
+        players = directCheck;
+      }
     }
     
     this._playersCache = players || [];

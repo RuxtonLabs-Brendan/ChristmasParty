@@ -27,11 +27,20 @@ export function useGameStatePusher() {
           console.log('✅ Game state received:', {
             playersCount: state.players?.length || 0,
             players: state.players,
-            phase: state.phase
+            phase: state.phase,
+            hostId: state.hostId,
+            fullState: state
           });
+          console.log('✅ Players array:', state.players);
+          console.log('✅ Players array type:', Array.isArray(state.players));
+          console.log('✅ Players array length:', state.players?.length);
+          if (state.players && state.players.length > 0) {
+            console.log('✅ Player details:', state.players.map(p => ({ id: p.id, name: p.name, emoji: p.emoji })));
+          }
           setGameState(state);
         } else {
-          console.error('❌ Failed to fetch state:', response.status);
+          const errorText = await response.text();
+          console.error('❌ Failed to fetch state:', response.status, errorText);
         }
       } catch (error) {
         console.error('❌ Error fetching game state:', error);

@@ -58,10 +58,34 @@ export default async function handler(req, res) {
       }
     }
     
+    // Final verification - if we still have no players, do one more direct check
+    if ((state.players?.length || 0) === 0) {
+      console.log('State API: Still no players, doing final direct database check...');
+      // Check ALL games and their players - use getAnyGame and check each
+      try {
+        const anyGame = await db.getAnyGame();
+        if (anyGame) {
+          console.log(`State API: Found a game ${anyGame.id}, checking for players...`);
+          const gamePlayers = await db.getPlayers(anyGame.id);
+          console.log(`State API: Game ${anyGame.id} has ${gamePlayers.length} players`);
+          if (gamePlayers.length > 0) {
+            console.log(`State API: Using game ${anyGame.id} with ${gamePlayers.length} players`);
+            state.players = gamePlayers;
+            state.phase = anyGame.phase || 'lobby';
+            state.currentTurnIndex = anyGame.current_turn_index || 0;
+            state.hostId = anyGame.host_id || null;
+          }
+        }
+      } catch (finalCheckError) {
+        console.error('State API: Final check error:', finalCheckError);
+      }
+    }
+    
     console.log('State API: Final state being returned:', {
       playersCount: state.players?.length || 0,
-      players: state.players?.map(p => ({ id: p.id, name: p.name })) || [],
-      phase: state.phase
+      players: state.players?.map(p => ({ id: p.id, name: p.name, emoji: p.emoji })) || [],
+      phase: state.phase,
+      hostId: state.hostId
     });
     
     return res.status(200).json(state);
