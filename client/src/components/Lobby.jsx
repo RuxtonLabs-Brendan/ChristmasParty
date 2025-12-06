@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CHRISTMAS_EMOJIS } from '../../../shared/types.js';
 
-export default function Lobby({ onJoin, isHost, playerCount, onOpenAdmin }) {
+export default function Lobby({ onJoin, isHost, playerCount, players = [], onOpenAdmin }) {
   const [name, setName] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState('🎄');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -70,11 +70,52 @@ export default function Lobby({ onJoin, isHost, playerCount, onOpenAdmin }) {
             JOIN GAME
           </button>
 
-          {playerCount > 0 && (
-            <p className="text-christmas-gold text-center text-lg">
-              {playerCount} {playerCount === 1 ? 'player' : 'players'} waiting...
-            </p>
-          )}
+          {/* Players Waiting Display */}
+          <div className="bg-white bg-opacity-20 rounded-lg border-4 border-christmas-gold p-4">
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <div className="text-4xl">👥</div>
+              <div className="text-center">
+                <div className="text-3xl font-impact text-christmas-gold drop-shadow-lg">
+                  {playerCount}
+                </div>
+                <div className="text-lg font-impact text-christmas-gold">
+                  {playerCount === 0 
+                    ? 'No players yet' 
+                    : playerCount === 1 
+                    ? 'Player waiting' 
+                    : 'Players waiting'}
+                </div>
+              </div>
+            </div>
+            
+            {/* Player List */}
+            {players && players.length > 0 && (
+              <div className="mt-3 pt-3 border-t-2 border-christmas-gold border-opacity-30">
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {players.map((player) => (
+                    <div 
+                      key={player.id} 
+                      className="flex items-center justify-center gap-2 bg-white bg-opacity-30 rounded px-3 py-1"
+                    >
+                      <span className="text-2xl">{player.emoji}</span>
+                      <span className="text-christmas-gold font-impact text-sm">{player.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Status Message */}
+            {playerCount > 0 && (
+              <div className="mt-3 pt-3 border-t-2 border-christmas-gold border-opacity-30">
+                <p className="text-center text-christmas-gold text-sm font-impact">
+                  {playerCount < 2 
+                    ? '⏳ Waiting for more players to join...' 
+                    : '✅ Ready to start! (Host can start the game)'}
+                </p>
+              </div>
+            )}
+          </div>
 
           {/* Admin Portal Button */}
           <button

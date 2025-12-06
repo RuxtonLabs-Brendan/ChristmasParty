@@ -66,6 +66,7 @@ function App() {
           onJoin={handleJoin}
           isHost={gameState.hostId === socket?.id}
           playerCount={gameState.players.length}
+          players={gameState.players}
           onOpenAdmin={() => setShowAdmin(true)}
         />
         {showAdmin && (
