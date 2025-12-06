@@ -65,16 +65,52 @@ export default async function handler(req, res) {
     // Add player using playerId instead of socket.id
     console.log('Adding player to game state...');
     const player = await gameState.addPlayer(playerId, name.trim(), emoji);
+    
+    if (!player) {
+      console.error('❌ ERROR: addPlayer returned null/undefined!');
+      return res.status(500).json({ error: 'Failed to add player to game' });
+    }
+    
     console.log(`✅ Player joined: ${player.name} (${player.emoji})`);
     console.log(`Game ID after adding player: ${gameState.gameId}`);
     
-    // Force refresh and get state
+    // Small delay to ensure database transaction is committed
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Force refresh and get state - this should now include the new player
     const state = await gameState.getState();
     console.log('Current game state after join:', {
       gameId: gameState.gameId,
       playersCount: state.players?.length || 0,
       players: state.players?.map(p => ({ id: p.id, name: p.name, emoji: p.emoji }))
     });
+    
+    // Verify the player is in the state
+    const playerInState = state.players?.find(p => p.id === playerId);
+    if (!playerInState) {
+      console.error('❌ WARNING: Player not found in state after join!');
+      console.error('Expected playerId:', playerId);
+      console.error('Players in state:', state.players?.map(p => p.id) || []);
+    } else {
+      console.log('✅ Verified: Player found in state');
+    }
+    
+    // Verify state has players before broadcasting
+    if (!state.players || state.players.length === 0) {
+      console.error('❌ CRITICAL: State has no players after join! Re-fetching...');
+      // Try one more time with a longer delay
+      await new Promise(resolve => setTimeout(resolve, 200));
+      const retryState = await gameState.getState();
+      if (retryState.players && retryState.players.length > 0) {
+        console.log('✅ Retry successful, state now has players');
+        state.players = retryState.players;
+        state.phase = retryState.phase;
+        state.hostId = retryState.hostId;
+        state.currentTurnIndex = retryState.currentTurnIndex;
+      } else {
+        console.error('❌ Retry failed, state still has no players');
+      }
+    }
     
     // Broadcast to all clients via Pusher
     console.log('Broadcasting player-joined event via Pusher...');
@@ -86,7 +122,9 @@ export default async function handler(req, res) {
       },
       gameState: {
         playersCount: state.players?.length || 0,
-        players: state.players?.map(p => ({ id: p.id, name: p.name })) || []
+        players: state.players?.map(p => ({ id: p.id, name: p.name, emoji: p.emoji })) || [],
+        phase: state.phase,
+        hostId: state.hostId
       }
     });
     
@@ -99,7 +137,13 @@ export default async function handler(req, res) {
           gifts: player.gifts || [],
           isConnected: true
         },
-        gameState: state
+        gameState: {
+          players: state.players || [],
+          gifts: state.gifts || [],
+          currentTurnIndex: state.currentTurnIndex || 0,
+          phase: state.phase || 'lobby',
+          hostId: state.hostId || null
+        }
       });
       console.log('✅ Pusher event broadcasted successfully');
       console.log('Pusher trigger result:', pusherResult);

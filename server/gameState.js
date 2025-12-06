@@ -102,9 +102,20 @@ class GameState {
     }
     
     await this.refreshCache();
-    const addedPlayer = this.players.find(p => p.id === socketId);
+    
+    // Get the player directly from database to ensure we have the correct one
+    const allPlayers = await db.getPlayers(gameId);
+    const addedPlayer = allPlayers.find(p => p.id === socketId);
+    
     console.log(`addPlayer: After refresh, found player:`, addedPlayer ? { id: addedPlayer.id, name: addedPlayer.name } : 'NOT FOUND');
-    console.log(`addPlayer: Total players in cache: ${this.players.length}`);
+    console.log(`addPlayer: Total players in cache: ${this.players.length}, in DB: ${allPlayers.length}`);
+    
+    if (!addedPlayer) {
+      console.error(`addPlayer: ERROR - Player ${socketId} not found after adding!`);
+      // Return a mock player object so the function doesn't fail
+      return { id: socketId, name, emoji, gifts: [], isConnected: true };
+    }
+    
     return addedPlayer;
   }
 
@@ -210,52 +221,55 @@ class GameState {
     // In serverless, we can't rely on instance state, so always query fresh
     console.log('getState: Starting fresh query...');
     
-    // Find the latest game with players
-    const latestGame = await db.getLatestGame();
+    // Strategy: Always find the most recent game with players
+    // If no game with players exists, find the most recent game (might have players being added)
+    let targetGame = await db.getLatestGame();
     
-    if (!latestGame) {
-      console.log('getState: No game found with players, checking all games...');
-      // Try to find ANY game, even without players (might be a new game)
-      // We need to import pool or use a helper function
-      try {
-        // Use a direct query through db module if available
-        const anyGame = await db.getAnyGame();
-        if (anyGame) {
-          console.log(`getState: Found game ${anyGame.id} without players yet`);
-          const players = await db.getPlayers(anyGame.id);
+    if (!targetGame) {
+      console.log('getState: No game found with players, checking for any game...');
+      targetGame = await db.getAnyGame();
+      
+      if (targetGame) {
+        console.log(`getState: Found game ${targetGame.id} (may not have players yet)`);
+        // Check if it actually has players now
+        const players = await db.getPlayers(targetGame.id);
+        if (players.length === 0) {
+          console.log('getState: Game exists but has no players, returning empty state');
           return {
-            players: players || [],
+            players: [],
             gifts: [],
-            currentTurnIndex: anyGame.current_turn_index || 0,
-            phase: anyGame.phase || GAME_PHASES.LOBBY,
-            hostId: anyGame.host_id || null
+            currentTurnIndex: targetGame.current_turn_index || 0,
+            phase: targetGame.phase || GAME_PHASES.LOBBY,
+            hostId: targetGame.host_id || null
           };
         }
-      } catch (err) {
-        console.error('getState: Error checking all games:', err);
+        // Game has players, use it
+      } else {
+        console.log('getState: No game found at all, returning empty state');
+        return {
+          players: [],
+          gifts: [],
+          currentTurnIndex: 0,
+          phase: GAME_PHASES.LOBBY,
+          hostId: null
+        };
       }
-      
-      console.log('getState: No game found, returning empty state');
-      return {
-        players: [],
-        gifts: [],
-        currentTurnIndex: 0,
-        phase: GAME_PHASES.LOBBY,
-        hostId: null
-      };
     }
     
-    console.log(`getState: Found game ${latestGame.id}, fetching players and gifts...`);
-    this.gameId = latestGame.id;
-    this._gameCache = latestGame;
+    console.log(`getState: Using game ${targetGame.id}, fetching players and gifts...`);
+    this.gameId = targetGame.id;
+    this._gameCache = targetGame;
     
     // Fetch players and gifts directly from database
     const [players, gifts] = await Promise.all([
-      db.getPlayers(latestGame.id),
-      db.getGifts(latestGame.id)
+      db.getPlayers(targetGame.id),
+      db.getGifts(targetGame.id)
     ]);
     
     console.log(`getState: Fetched ${players?.length || 0} players, ${gifts?.length || 0} gifts`);
+    if (players.length > 0) {
+      console.log('getState: Players:', players.map(p => ({ id: p.id, name: p.name, emoji: p.emoji })));
+    }
     
     this._playersCache = players || [];
     this._giftsCache = gifts || [];
@@ -263,13 +277,13 @@ class GameState {
     const state = {
       players: this._playersCache,
       gifts: this._giftsCache,
-      currentTurnIndex: latestGame.current_turn_index || 0,
-      phase: latestGame.phase || GAME_PHASES.LOBBY,
-      hostId: latestGame.host_id || null
+      currentTurnIndex: targetGame.current_turn_index || 0,
+      phase: targetGame.phase || GAME_PHASES.LOBBY,
+      hostId: targetGame.host_id || null
     };
     
     console.log('getState() returning:', {
-      gameId: latestGame.id,
+      gameId: targetGame.id,
       playersCount: state.players.length,
       players: state.players.map(p => ({ id: p.id, name: p.name, emoji: p.emoji })),
       phase: state.phase,
