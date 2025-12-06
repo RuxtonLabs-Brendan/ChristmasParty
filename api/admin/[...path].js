@@ -42,16 +42,32 @@ export default async function handler(req, res) {
     }
 
     // Parse request body if present
+    // Vercel serverless functions may auto-parse JSON, but handle both cases
     let body = {};
     if (req.method === 'POST' || req.method === 'PUT') {
       try {
+        // Log raw body to debug
+        console.log('Raw req.body type:', typeof req.body);
+        console.log('Raw req.body:', req.body);
+        
         if (req.body) {
           if (typeof req.body === 'string') {
-            body = JSON.parse(req.body);
+            try {
+              body = JSON.parse(req.body);
+            } catch (e) {
+              console.error('Failed to parse body as JSON:', e);
+              body = {};
+            }
           } else if (typeof req.body === 'object') {
             body = req.body;
+          } else {
+            console.log('Unexpected body type:', typeof req.body);
+            body = {};
           }
+        } else {
+          console.log('No body in request');
         }
+        console.log('Parsed body:', body);
       } catch (parseError) {
         console.error('Error parsing request body:', parseError);
         return res.status(400).json({ error: 'Invalid JSON in request body' });
@@ -65,6 +81,12 @@ export default async function handler(req, res) {
     const pathArray = Array.isArray(path) ? path : (path ? [path] : []);
     const firstSegment = pathArray[0] || '';
     
+    console.log('Request path:', req.url);
+    console.log('Path array:', pathArray);
+    console.log('First segment:', firstSegment);
+    console.log('Request body:', JSON.stringify(body));
+    console.log('Request method:', req.method);
+
     // Extract gift ID from path (if path is like ['gifts', '123'])
     let giftId = null;
     if (pathArray.length > 1) {
@@ -75,23 +97,46 @@ export default async function handler(req, res) {
     }
 
     // Handle extract-amazon-image endpoint
-    if (firstSegment === 'extract-amazon-image' && req.method === 'POST') {
+    // Check both path segment and URL to handle different routing scenarios
+    const isExtractEndpoint = firstSegment === 'extract-amazon-image' || 
+                             (req.url && req.url.includes('extract-amazon-image'));
+    
+    if (isExtractEndpoint && req.method === 'POST') {
       try {
-        const { url } = body;
+        console.log('Processing extract-amazon-image request');
+        console.log('Body:', JSON.stringify(body));
+        console.log('Body keys:', Object.keys(body || {}));
+        const { url } = body || {};
+        console.log('Extracted URL from body:', url);
+        console.log('URL type:', typeof url);
         
-        if (!url || !url.trim()) {
-          return res.status(400).json({ error: 'URL is required' });
+        if (!url) {
+          console.log('URL validation failed: URL is missing');
+          return res.status(400).json({ 
+            error: 'URL is required',
+            received: body,
+            bodyKeys: Object.keys(body || {})
+          });
+        }
+        
+        if (typeof url === 'string' && !url.trim()) {
+          console.log('URL validation failed: URL is empty string');
+          return res.status(400).json({ error: 'URL cannot be empty' });
         }
 
+        const urlString = typeof url === 'string' ? url.trim() : String(url).trim();
+
         // Check if it's an Amazon URL
-        if (!url.includes('amazon.com') && !url.includes('amzn.to')) {
+        if (!urlString.includes('amazon.com') && !urlString.includes('amzn.to')) {
+          console.log('URL validation failed: Not an Amazon URL');
           return res.status(400).json({ error: 'Please provide an Amazon product URL' });
         }
 
-        console.log('Extracting image from Amazon URL:', url);
-        const imageUrl = await extractAmazonImage(url.trim());
+        console.log('Extracting image from Amazon URL:', urlString);
+        const imageUrl = await extractAmazonImage(urlString);
         
         if (!imageUrl) {
+          console.log('Image extraction returned null');
           return res.status(404).json({ error: 'Could not extract image from Amazon URL' });
         }
 
@@ -99,6 +144,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ imageUrl });
       } catch (error) {
         console.error('Error extracting Amazon image:', error);
+        console.error('Error stack:', error.stack);
         return res.status(500).json({ error: 'Failed to extract image from Amazon URL: ' + (error?.message || 'Unknown error') });
       }
     }
