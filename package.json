@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "build": "cd client && npm run build",
+    "start": "NODE_ENV=production cd server && node server.js",
     "server": "cd server && node server.js",
     "client": "cd client && npm run dev"
   },

@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
-const API_BASE = 'http://localhost:3001/api/admin';
+// Use relative URL in production, localhost in development
+const API_BASE = import.meta.env.PROD 
+  ? '/api/admin'
+  : 'http://localhost:3001/api/admin';
 const ADMIN_PASSWORD = 'merrychristmas';
 
 export default function AdminPortal({ onClose }) {
