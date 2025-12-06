@@ -1,4 +1,4 @@
-# White Elephant Board Game
+# Enlighten Christmas Party
 
 A real-time multiplayer White Elephant game with a physical board game aesthetic, built with React, Tailwind CSS, Node.js, and Socket.io.
 
