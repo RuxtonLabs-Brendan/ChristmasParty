@@ -80,6 +80,60 @@ export function useGameStatePusher() {
     };
   }, []);
 
+  // Handle browser close/unload - remove player from game
+  useEffect(() => {
+    if (!playerId) return; // Don't set up listeners if no playerId yet
+
+    const handleBeforeUnload = (event) => {
+      // Use fetch with keepalive - more reliable than sendBeacon for JSON
+      // keepalive ensures the request continues even after page unloads
+      try {
+        fetch(`${API_BASE}/leave`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playerId }),
+          keepalive: true // Critical: allows request to complete after page unloads
+        }).catch(err => {
+          // Silently fail - page is closing anyway
+          console.log('Leave request sent (may complete after page closes)');
+        });
+        console.log('✅ Sent leave request via fetch (keepalive)');
+      } catch (error) {
+        console.error('Error sending leave request:', error);
+        // Fallback: try sendBeacon
+        if (navigator.sendBeacon) {
+          try {
+            const blob = new Blob([JSON.stringify({ playerId })], { type: 'application/json' });
+            navigator.sendBeacon(`${API_BASE}/leave`, blob);
+            console.log('✅ Sent leave request via sendBeacon (fallback)');
+          } catch (beaconError) {
+            console.error('Error with sendBeacon fallback:', beaconError);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handleBeforeUnload); // Also handle pagehide for mobile
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handleBeforeUnload);
+      
+      // Also try to leave when component unmounts (e.g., navigation away)
+      // Use fetch with keepalive for component unmount
+      fetch(`${API_BASE}/leave`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId }),
+        keepalive: true
+      }).catch(err => {
+        // Silently fail - component is unmounting anyway
+        console.log('Leave request on unmount (may have failed):', err.message);
+      });
+    };
+  }, [playerId]);
+
   // Listen to Pusher events
   useEffect(() => {
     if (!channel) {
