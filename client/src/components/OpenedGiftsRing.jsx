@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getRingPosition } from '../utils/positioning.js';
 
-export default function OpenedGiftsRing({ gifts, players, onGiftClick, isCurrentPlayer }) {
+export default function OpenedGiftsRing({ gifts, players, onGiftClick, isCurrentPlayer, currentPlayerId }) {
   const openedGifts = gifts?.filter(gift => gift.isOpened) || [];
   const [newlyOpenedGifts, setNewlyOpenedGifts] = useState(new Set());
   
@@ -36,8 +36,9 @@ export default function OpenedGiftsRing({ gifts, players, onGiftClick, isCurrent
       {openedGifts.map((gift, index) => {
         const position = getRingPosition(index, openedGifts.length, radius, centerX, centerY);
         const owner = players?.find(p => p.id === gift.ownerId);
-        // Can steal if: current player's turn, gift hasn't been stolen twice, and gift has an owner
-        const canSteal = isCurrentPlayer && gift.stealCount < 2 && gift.ownerId;
+        // Can steal if: current player's turn, gift hasn't been stolen twice, gift has an owner, and it's not your own gift
+        const isOwnGift = gift.ownerId === currentPlayerId;
+        const canSteal = isCurrentPlayer && gift.stealCount < 2 && gift.ownerId && !isOwnGift;
 
         return (
           <div

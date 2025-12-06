@@ -19,6 +19,9 @@ export default function GameUI({ gameState, connected, isHost, onStartGame, onOp
             <div className="text-4xl font-impact text-christmas-red drop-shadow-lg">
               {currentPlayer.emoji} {currentPlayer.name.toUpperCase()}'S TURN!
             </div>
+            <div className="text-xl font-impact text-white mt-2">
+              Choose a wrapped gift OR steal an opened gift!
+            </div>
           </div>
         </div>
       )}

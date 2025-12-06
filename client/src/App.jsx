@@ -104,6 +104,7 @@ function GameApp() {
           players={gameState.players}
           onGiftClick={handleGiftClick}
           isCurrentPlayer={isCurrentPlayer()}
+          currentPlayerId={currentPlayerId}
         />
         
         <PlayerSeats

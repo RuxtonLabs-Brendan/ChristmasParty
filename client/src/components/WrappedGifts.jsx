@@ -31,14 +31,25 @@ export default function WrappedGifts({ gifts, onGiftClick, isCurrentPlayer }) {
 
   if (!gifts || gifts.length === 0) return null;
 
+  const wrappedGifts = gifts.filter(gift => !gift.isOpened);
+  
+  // Show message if it's your turn but no wrapped gifts available
+  if (isCurrentPlayer && wrappedGifts.length === 0) {
+    return (
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white bg-opacity-90 px-8 py-4 rounded-lg border-4 border-christmas-gold z-50">
+        <div className="text-center font-impact text-christmas-red text-xl">
+          No more wrapped gifts! You can only steal opened gifts now.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
-      {gifts
-        .filter(gift => !gift.isOpened)
-        .map((gift) => {
-          const isHovered = hoveredGift === gift.id;
-          const isPressed = pressedGift === gift.id;
-          const canInteract = isCurrentPlayer && !gift.isOpened;
+      {wrappedGifts.map((gift) => {
+        const isHovered = hoveredGift === gift.id;
+        const isPressed = pressedGift === gift.id;
+        const canInteract = isCurrentPlayer && !gift.isOpened;
 
           return (
             <div
