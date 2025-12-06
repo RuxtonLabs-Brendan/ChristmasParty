@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "build": "cd client && npm run build",
-    "start": "NODE_ENV=production cd server && node server.js",
+    "start": "cd server && cross-env NODE_ENV=production node server.js",
     "server": "cd server && node server.js",
     "client": "cd client && npm run dev"
   },
@@ -20,7 +20,8 @@
     "pusher": "^5.2.0"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3"
   }
 }
 
