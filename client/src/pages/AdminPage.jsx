@@ -587,10 +587,10 @@ export default function AdminPage() {
                   <div key={gift.id}>
                     {editingGift === gift.id ? (
                       // Edit Mode
-                      <div className="bg-white border-4 border-christmas-gold rounded-lg p-4">
+                      <div className="bg-white bg-opacity-95 border-4 border-christmas-gold rounded-lg p-4">
                         <form onSubmit={handleSaveEdit} className="space-y-3">
                           <div>
-                            <label className="block text-christmas-gold font-impact text-sm mb-1">
+                            <label className="block text-christmas-red font-impact text-sm mb-1">
                               Gift Name *
                             </label>
                             <input
@@ -604,7 +604,7 @@ export default function AdminPage() {
                             />
                           </div>
                           <div>
-                            <label className="block text-christmas-gold font-impact text-sm mb-1">
+                            <label className="block text-christmas-red font-impact text-sm mb-1">
                               Amazon Product URL (Optional)
                             </label>
                             <div className="flex gap-2 mb-2">
@@ -625,7 +625,7 @@ export default function AdminPage() {
                               </button>
                             </div>
                             <div>
-                              <label className="block text-christmas-gold font-impact text-xs mb-1">
+                              <label className="block text-christmas-red font-impact text-xs mb-1">
                                 Image URL
                               </label>
                               <input
@@ -660,7 +660,7 @@ export default function AdminPage() {
                       </div>
                     ) : (
                       // Display Mode
-                      <div className="bg-white border-4 border-christmas-gold rounded-lg p-4 hover:shadow-lg transition">
+                      <div className="bg-white bg-opacity-95 border-4 border-christmas-gold rounded-lg p-4 hover:shadow-lg transition">
                         <div className="flex items-start gap-4">
                           {gift.image && (
                             <img
@@ -673,7 +673,7 @@ export default function AdminPage() {
                             />
                           )}
                           <div className="flex-1">
-                            <h3 className="font-impact text-christmas-gold text-lg mb-2">
+                            <h3 className="font-impact text-christmas-red text-lg mb-2">
                               {gift.name}
                             </h3>
                             <div className="flex gap-2">
