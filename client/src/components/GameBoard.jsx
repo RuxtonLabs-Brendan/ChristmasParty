@@ -1,6 +1,6 @@
 export default function GameBoard({ children }) {
   return (
-    <div className="relative w-full h-full flex items-center justify-center">
+    <div className="relative w-full min-h-screen flex items-center justify-center py-8">
       {/* Wood table surface */}
       <div className="absolute inset-0 wood-texture" />
       

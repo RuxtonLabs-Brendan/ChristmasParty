@@ -95,7 +95,7 @@ function GameApp() {
   }
 
   return (
-    <div className="w-screen min-h-screen overflow-y-auto" style={{ width: '100vw', minHeight: '100vh' }}>
+    <div className="w-full min-h-screen">
       <GameUI
         gameState={gameState}
         connected={connected}
