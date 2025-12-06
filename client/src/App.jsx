@@ -68,7 +68,14 @@ function App() {
           playerCount={gameState.players.length}
           onOpenAdmin={() => setShowAdmin(true)}
         />
-        {showAdmin && <AdminPortal onClose={() => setShowAdmin(false)} />}
+        {showAdmin && (
+          <AdminPortal 
+            onClose={() => setShowAdmin(false)} 
+            socket={socket}
+            startGame={startGame}
+            gameState={gameState}
+          />
+        )}
       </>
     );
   }
@@ -83,7 +90,14 @@ function App() {
         onOpenAdmin={() => setShowAdmin(true)}
       />
       
-      {showAdmin && <AdminPortal onClose={() => setShowAdmin(false)} />}
+      {showAdmin && (
+        <AdminPortal 
+          onClose={() => setShowAdmin(false)} 
+          socket={socket}
+          startGame={startGame}
+          gameState={gameState}
+        />
+      )}
       
       <GameBoard>
         <ChristmasTree />

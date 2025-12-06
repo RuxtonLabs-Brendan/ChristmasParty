@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { GAME_PHASES } from '../../../shared/types.js';
 
 // Use relative URL in production, localhost in development
 const API_BASE = import.meta.env.PROD 
@@ -7,7 +8,7 @@ const API_BASE = import.meta.env.PROD
   : 'http://localhost:3001/api/admin';
 const ADMIN_PASSWORD = 'merrychristmas';
 
-export default function AdminPortal({ onClose }) {
+export default function AdminPortal({ onClose, socket, startGame, gameState }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -18,7 +19,33 @@ export default function AdminPortal({ onClose }) {
   const [editFormData, setEditFormData] = useState({ name: '', image: '', amazonUrl: '' });
   const [extractingImage, setExtractingImage] = useState(false);
   const [error, setError] = useState('');
+  const [startingGame, setStartingGame] = useState(false);
   const passwordInputRef = useRef(null);
+
+  // Listen for game start errors
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleError = ({ message }) => {
+      if (message.includes('start') || message.includes('game')) {
+        setError(message);
+        setStartingGame(false);
+      }
+    };
+
+    const handleGameStarted = () => {
+      setStartingGame(false);
+      setError('');
+    };
+
+    socket.on('error', handleError);
+    socket.on('game-started', handleGameStarted);
+
+    return () => {
+      socket.off('error', handleError);
+      socket.off('game-started', handleGameStarted);
+    };
+  }, [socket]);
 
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
@@ -429,6 +456,67 @@ export default function AdminPortal({ onClose }) {
         {error && (
           <div className="bg-red-600 text-white p-3 rounded border-4 border-white mb-4 font-impact">
             {error}
+          </div>
+        )}
+
+        {/* Start Session Button */}
+        {socket && startGame && gameState && (
+          <div className="bg-white bg-opacity-90 p-6 rounded-lg border-4 border-christmas-gold mb-6">
+            <h2 className="text-2xl font-impact text-christmas-red mb-4">🎮 Game Session Control</h2>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-lg font-impact text-gray-700">
+                    Game Phase: <span className="text-christmas-red">{gameState.phase || 'Unknown'}</span>
+                  </p>
+                  <p className="text-lg font-impact text-gray-700">
+                    Players Joined: <span className="text-christmas-red">{gameState.players?.length || 0}</span>
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    if (startGame && socket && socket.connected) {
+                      setStartingGame(true);
+                      setError('');
+                      startGame();
+                    } else if (!socket || !socket.connected) {
+                      setError('Not connected to server. Please refresh the page.');
+                    }
+                  }}
+                  disabled={
+                    startingGame ||
+                    !socket || 
+                    !socket.connected || 
+                    gameState.phase !== GAME_PHASES.LOBBY ||
+                    (gameState.players?.length || 0) < 2
+                  }
+                  className="px-8 py-4 bg-gradient-to-r from-christmas-green to-christmas-red text-white font-impact text-xl rounded border-4 border-christmas-gold hover:from-green-600 hover:to-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg transform hover:scale-105"
+                  title={
+                    startingGame
+                      ? 'Starting game...'
+                      : !socket || !socket.connected 
+                      ? 'Not connected to server'
+                      : gameState.phase !== GAME_PHASES.LOBBY
+                      ? 'Game already started'
+                      : (gameState.players?.length || 0) < 2
+                      ? 'Need at least 2 players to start'
+                      : 'Start the game session'
+                  }
+                >
+                  {startingGame ? '⏳ Starting...' : '🚀 START SESSION'}
+                </button>
+              </div>
+              {gameState.phase === GAME_PHASES.LOBBY && (gameState.players?.length || 0) < 2 && (
+                <p className="text-sm text-gray-600 font-impact">
+                  ⚠️ Need at least 2 players to start the game
+                </p>
+              )}
+              {gameState.phase === GAME_PHASES.PLAYING && (
+                <p className="text-sm text-green-600 font-impact">
+                  ✅ Game is currently in progress
+                </p>
+              )}
+            </div>
           </div>
         )}
 
